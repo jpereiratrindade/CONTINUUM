@@ -13,7 +13,7 @@ from pathlib import Path
 
 from . import __version__
 from .api import catalog, execute
-from .core import Lab, utcnow
+from .core import Lab, utcnow, provenance
 from .retrieval import discover, markdown_pack
 
 WEBROOT = (Path(__file__).resolve().parent.parent / "web").resolve()
@@ -90,7 +90,8 @@ def create_handler(lab: Lab, ollama_model: str = ""):
         def _dispatch(self, action):
             try:
                 self._validate_local()
-                action()
+                with provenance("user", "browser-or-http-client"):
+                    action()
             except PermissionError as ex:
                 self._send(403,{"error":str(ex)})
             except (ValueError, KeyError, TypeError, OSError) as ex:
@@ -114,6 +115,13 @@ def create_handler(lab: Lab, ollama_model: str = ""):
                 self._send(200,{"status":"experimental","version":__version__,"llm_enabled":bool(ollama_model)})
             elif path == "/api/capabilities":
                 self._send(200, {"operations": catalog(True)})
+            elif path == "/api/document-version":
+                self._send(200, execute(lab, "document_version", {"id": arg("id")}))
+            elif path == "/api/reference/export":
+                result = execute(lab, "export_reference", {"id": arg("id")})
+                self._send(200, result["markdown"].encode("utf-8"), "text/markdown; charset=utf-8", "continuum-texto.md")
+            elif path == "/api/reference":
+                self._send(200, execute(lab, "reference", {"id": arg("id")}))
             elif path in ("/api/nodes", "/api/node", "/api/documents", "/api/document", "/api/events", "/api/verify", "/api/anchor"):
                 args = {k: values[0] for k, values in query.items()}
                 for key in ("limit", "offset", "after"):
@@ -149,7 +157,10 @@ def create_handler(lab: Lab, ollama_model: str = ""):
             if not isinstance(data,dict):
                 raise ValueError("Corpo precisa ser um objeto JSON")
             path=urllib.parse.urlsplit(self.path).path
-            if path == "/api/investigations":
+            if path in ("/api/reference/note", "/api/reference/refresh", "/api/reference/review"):
+                operation = {"/api/reference/note": "save_note", "/api/reference/refresh": "refresh_reference", "/api/reference/review": "review_contribution"}[path]
+                result = execute(lab, operation, data, allow_writes=True)
+            elif path == "/api/investigations":
                 result = execute(lab, "investigate", data, allow_writes=True)
             elif path == "/api/sources":
                 result=lab.register_source(str(data.get("path","")),str(data.get("label","Fonte")))
@@ -188,6 +199,9 @@ def create_handler(lab: Lab, ollama_model: str = ""):
             else:
                 self._send(404,{"error":"Rota não encontrada"})
                 return
+            if path in {"/api/sources", "/api/sources/active", "/api/scan", "/api/nodes", "/api/nodes/revise", "/api/links"}:
+                from .continuity import refresh
+                refresh(lab)
             self._send(200,result)
     return Handler
 
@@ -203,7 +217,7 @@ def serve(lab: Lab, port: int = 8767, scan_every: int = 180, ollama_model: str =
         try:
             while not stop.is_set():
                 try:
-                    lab.scan()
+                    execute(lab, "scan", {}, allow_writes=True)
                 except Exception as ex:
                     print(f"[observação] erro: {ex}",flush=True)
                 if scan_every == 0:

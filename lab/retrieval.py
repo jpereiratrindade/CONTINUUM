@@ -29,8 +29,7 @@ def overlap(a: str, b: str) -> tuple[float, list[str]]:
 
 
 def _matched_docs(lab: Lab, query: str, limit: int) -> list[dict]:
-    ts = list(dict.fromkeys(words(query)))[:12]
-    ts = [t for t in ts if t not in STOP and len(t) >= 3]
+    ts = [t for t in dict.fromkeys(words(query)) if t not in STOP and len(t) >= 3][:24]
     if not ts:
         return []
     # Entirely constructed from word tokens; FTS syntax injection is not possible.
@@ -56,11 +55,11 @@ def _matched_nodes(lab: Lab, query: str, limit: int) -> list[dict]:
     if not q:
         return []
     with lab.lock:
-        rows = lab.db.execute("SELECT * FROM nodes ORDER BY updated_at DESC LIMIT 2000").fetchall()
+        rows = lab.db.execute("SELECT n.*,COALESCE(w.text,'') AS working_text FROM nodes n LEFT JOIN working_notes w ON w.node_id=n.id ORDER BY n.updated_at DESC,n.id LIMIT 2000").fetchall()
     matches = []
     for row in rows:
         item = dict(row)
-        score = len(q & tokens(item["title"] + " " + item["body"])) / len(q)
+        score = len(q & tokens(item["title"] + " " + item["body"] + " " + item["working_text"])) / len(q)
         if score:
             item["match_type"]="lexical_overlap"
             item["score"] = round(score,3)
@@ -70,8 +69,8 @@ def _matched_nodes(lab: Lab, query: str, limit: int) -> list[dict]:
 
 
 def discover(lab: Lab, query: str, limit: int = 8) -> dict:
-    if not query.strip() or len(query) > 1500:
-        raise ValueError("Informe uma questão de até 1500 caracteres")
+    if not query.strip() or len(query) > 4000:
+        raise ValueError("Informe uma questão de até 4000 caracteres")
     docs = _matched_docs(lab,query,limit)
     nodes = _matched_nodes(lab,query,limit)
     # Cross-source tentative connections. This is not an inference of causation.

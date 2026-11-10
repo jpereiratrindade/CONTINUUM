@@ -1,12 +1,12 @@
 # CONTINUUM — Laboratório Experimental de Continuidade Intelectual
 
-**Versão:** 0.2.0 · **Estado:** bancada experimental · **Origem:** revisão crítica do LAC, sem substituí-lo.
+**Versão:** 0.3.0 · **Estado:** bancada experimental · **Origem:** revisão crítica do LAC, sem substituí-lo.
 
 > **Questão orientadora:** como sustentar a continuidade do trabalho intelectual entre documentos, ideias, decisões, instrumentos e projetos, preservando evidência, temporalidade, incompletude e capacidade de revisão?
 >
 > **Lema:** Simples, leve. Sempre pronto. Sempre incompleto.
 
-Este é um **sistema executável de pesquisa**, não uma interface fictícia, um gerenciador de commits ou um sistema científico validado. A experiência começa por uma **questão**. O sistema recupera fontes autorizadas, reconstrói registros parciais, distingue declarações e observações, sugere **aproximações lexicais candidatas** e prepara um roteiro Markdown para continuar o trabalho.
+Este é um **sistema executável de pesquisa**, não uma interface fictícia, um gerenciador de commits ou um sistema científico validado. A experiência começa por uma **ideia, questão ou fragmento**. O sistema recupera fontes autorizadas, reconstrói registros parciais, distingue declarações e observações, sugere **aproximações lexicais candidatas** e prepara um roteiro Markdown para continuar o trabalho.
 
 Nenhum código do LAC precisa ser substituído ou apagado. O LAC permanece como registro e bancada histórica de engenharia; CONTINUUM testa uma hipótese diferente de interação.
 
@@ -21,29 +21,28 @@ python3 -m unittest discover -s tests -v
 
 Abrir `http://127.0.0.1:8767`. O projeto usa apenas a biblioteca-padrão Python, sem instalação de dependências.
 
+## Continuar criando
+
+1. Em **Fontes observadas**, autorize uma pasta de trabalho. O observador lê `.md`, `.markdown`, `.tex` e `.txt` sem modificar os originais.
+2. Em **Continuar**, comece com uma ideia, pergunta ou fragmento. Desenvolva o texto no mesmo espaço; ele é preservado automaticamente.
+3. Abra as contribuições em **Ao redor desta ideia** quando forem úteis. Você pode ler a versão completa da fonte, trazer um trecho para o texto ou dispensá-lo.
+4. Feche e retorne: o percurso e seu texto permanecem disponíveis. MCP e navegador compartilham a mesma referência.
+
+A observação periódica (180 segundos por padrão) prepara novos contextos quando as fontes mudam. Cada referência aponta para um snapshot preservado. Contribuições são aproximações lexicais candidatas; não são interpretações verificadas. [Experimento de convergência e automação](docs/06-CONVERGENCIA.md).
+
 ## API e MCP
 
-A versão 0.2.0 amplia a API HTTP e adiciona MCP via stdio, com 11 ferramentas de leitura e 7 de escrita opcionais. Veja [configuração, endpoints e exemplos](docs/04-API-MCP.md).
-
 ```bash
-# MCP: o cliente envia JSON-RPC por stdin e recebe respostas em stdout.
+# Consulta do espaço de referência, sem escrita:
 python3 -m lab --db ./data/continuum.sqlite mcp
 
-# Habilitar também autorização de fontes, varredura, criação e revisão.
+# Permitir contribuições de clientes locais:
 python3 -m lab --db ./data/continuum.sqlite mcp --allow-writes
 ```
 
-A interface compartilha a [identidade visual do LAC](docs/05-IDENTIDADE-VISUAL.md). Perguntas submetidas por **Investigar** são preservadas em Trajetórias; o último rascunho é restaurado neste navegador.
+Ferramentas `reference`, `save_note`, `refresh_reference`, `review_contribution`, `document_version` e `export_reference` complementam as operações existentes. O texto de trabalho usa revisão explícita para impedir sobrescrita silenciosa entre clientes. Consulte [configuração e contratos](docs/04-API-MCP.md).
 
-## Percurso de experimentação (primeiros 15 minutos)
-
-1. Abrir **Fontes observadas** e autorizar **somente uma pasta que se deseja observar**, preferencialmente com arquivos `.md`, `.tex` ou `.txt` de pesquisa. Usar **Observar fontes agora** para conferir o resultado.
-2. Em **Explorar questões**, escrever uma questão substantiva (ex.: `Como a idempotência se relaciona à integridade temporal?`). Examinar as referências e suas limitações, não apenas as palavras coincidentes.
-3. Em **Trajetórias**, iniciar uma questão e registrar um contexto inicial. Abrir sua história, revisar a compreensão e justificar a mudança. Verificar que o histórico anterior continua acessível.
-4. Experimentar **Criar roteiro**. Um novo arquivo `.md` aparecerá no workspace independente (`./workspace/` por padrão). O comando **Exportar MD** gera texto Markdown sem gravar no workspace.
-5. Executar `python3 -m lab --db ./data/continuum.sqlite verify` para verificar a cadeia e os snapshots.
-
-As fontes podem ser **pausadas ou reativadas** pela interface. Pausar interrompe a observação futura, mas **não apaga conteúdo histórico**. O observador periódico processa **somente raízes cadastradas e ativas**. Ele ignora links simbólicos, diretórios técnicos, arquivos acima de 1 MiB e extensões fora do conjunto permitido. Limite de 3.000 arquivos elegíveis por raiz; varreduras incompletas não devem ser interpretadas como desaparecimento definitivo.
+A interface compartilha a [identidade visual do LAC](docs/05-IDENTIDADE-VISUAL.md). A versão atual não lê automaticamente conversas de ChatGPT, e-mail, Word ou PDF; integrações futuras devem utilizar o espaço de referência por API/MCP e fontes autorizadas.
 
 ## Operação CLI
 
@@ -65,7 +64,7 @@ Somente se houver Ollama instalado e o usuário desejar conduzir um experimento 
 ./run.sh --port 8767 --scan-every 180 --ollama-model qwen2.5:14b
 ```
 
-A opção **Explorar hipóteses com modelo local** ficará disponível. As respostas são sempre **interpretações não verificadas**, e nunca alteram fatos, fontes, nós ou relações automaticamente. O serviço é acessado **somente** em `http://127.0.0.1:11434`. Nenhuma chamada externa é efetuada pelo CONTINUUM; o operador é responsável pela configuração e política de privacidade do serviço local.
+O endpoint `POST /api/explore` permite explorar hipóteses com o modelo local habilitado. As respostas são sempre **interpretações não verificadas**, e nunca alteram fatos, fontes, nós ou relações automaticamente. O serviço é acessado **somente** em `http://127.0.0.1:11434`. Nenhuma chamada externa é efetuada pelo CONTINUUM; o operador é responsável pela configuração e política de privacidade do serviço local.
 
 ## O que funciona nesta versão
 
@@ -85,6 +84,7 @@ A opção **Explorar hipóteses com modelo local** ficará disponível. As respo
 
 ```text
 lab/
+  continuity.py  espaços de referência, notas e contexto automático
   core.py         diário de acontecimentos, fontes, snapshots, trajetórias e vínculos
   retrieval.py    busca lexical, conexões candidatas e roteiro Markdown
   server.py       interface HTTP local, APIs, adaptações e Ollama opcional

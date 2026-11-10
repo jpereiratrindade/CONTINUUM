@@ -1,4 +1,4 @@
-# Integrações API e MCP — 0.2.0
+# Integrações API e MCP — 0.3.0
 
 A base 0.1.0 veio de `CONTINUUM_v0.1.0.patch`. Esta versão mantém os endpoints existentes e adiciona consultas paginadas e integração MCP sem dependências externas.
 
@@ -78,3 +78,24 @@ A suíte cobre o fluxo HTTP, paginação, leitura de snapshots, cursores de even
 ## Investigação preservada
 
 `POST /api/investigations` e a ferramenta MCP de escrita `investigate` recebem `query` (1–4000 caracteres) e `request_id` (UUID). Retornam a recuperação com `question_node`, a questão registrada. O mesmo identificador e texto não duplicam registros. A gravação é confirmada antes da recuperação: se a resposta falhar, repetir a solicitação com o mesmo identificador. A interface salva esse identificador junto ao rascunho antes de enviar.
+
+## Espaço de referência compartilhado — 0.3.0
+
+| Método | HTTP | MCP | Parâmetros |
+|---|---|---|---|
+| GET | `/api/reference?id=…` | `reference` | `id` do percurso |
+| GET | `/api/reference/export?id=…` | `export_reference` | `id`; devolve texto e referências em Markdown |
+| POST | `/api/reference/note` | `save_note` | `id`, `text` até 20.000 caracteres, `revision` atual |
+| POST | `/api/reference/refresh` | `refresh_reference` | `id` |
+| POST | `/api/reference/review` | `review_contribution` | `id`, `suggestion_id`, `state`: dismissed/incorporated/available |
+| GET | `/api/document-version?id=…` | `document_version` | `id` do evento do snapshot |
+
+`reference` retorna `node`, `note`, `package`, `package_event_id`, `stale` e `feedback`. A leitura não altera o histórico. Uma instância somente MCP deve usar `scan` ou `refresh_reference` com escrita habilitada para preparar ou atualizar pacotes; o observador automático pertence ao servidor HTTP.
+
+Antes da primeira edição, `note.text` apresenta o corpo original do percurso com revisão zero, incluindo fragmentos longos. `save_note` exige a revisão lida anteriormente. Um conflito retorna erro e não sobrescreve o outro texto. Repetir exatamente o texto já preservado é idempotente, inclusive após perda da resposta. O registro do texto e a preparação do contexto são transações distintas: caso a preparação falhe, o texto continua preservado e a leitura pode indicar contexto desatualizado.
+
+A observação e as escritas por API/MCP preparam pacotes versionados. Escritas diretas na classe `Lab` são primitivas de domínio e não acionam essa orquestração. `create_node`, `revise_node` e `investigate` podem acrescentar eventos `continuity_prepared` além dos eventos declarados.
+
+Novas escritas MCP registram `source_type=mcp_client` e `source_ref=mcp:<nome informado na inicialização>`. Isso identifica o canal e o cliente declarado, sem autenticar autoria humana. Escritas HTTP usam origem `browser-or-http-client`. Eventos derivados usam `source_type=automation` e `evidence_state=generated`. Registros históricos anteriores permanecem inalterados.
+
+As evidências do pacote incluem `version_event_id` e `content_hash`; `document_version` permite recuperar o conteúdo exato mesmo após novas observações. O pacote e o texto de trabalho também podem ser inspecionados no histórico do percurso.

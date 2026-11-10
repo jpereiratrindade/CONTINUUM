@@ -5,6 +5,8 @@ Only the journal is historical truth. All other tables are replaceable projectio
 from __future__ import annotations
 
 import hashlib
+from contextlib import contextmanager
+from contextvars import ContextVar
 import json
 import os
 import re
@@ -15,6 +17,18 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
+ACTOR = ContextVar("continuum_actor", default=None)
+
+
+@contextmanager
+def provenance(source_type, source_ref):
+    token = ACTOR.set((source_type, source_ref))
+    try:
+        yield
+    finally:
+        ACTOR.reset(token)
+
 
 FILE_TYPES = {".md", ".markdown", ".txt", ".tex"}
 SKIP_DIRS = {".git", ".venv", "__pycache__", "node_modules", "build", "dist", "output", ".cache"}
@@ -89,6 +103,8 @@ class Lab:
         self.db.execute("PRAGMA busy_timeout=5000")
         self.db.execute("PRAGMA journal_mode=WAL")
         self._schema()
+        from .continuity import schema
+        schema(self)
 
     def close(self) -> None:
         self.db.close()
@@ -167,6 +183,8 @@ class Lab:
     def _append(self, stream_id: str, kind: str, payload: dict, *,
                 source_type: str, source_ref: str, evidence_state: str,
                 occurred_at: str | None = None) -> dict:
+        if source_type == "user" and ACTOR.get():
+            source_type, source_ref = ACTOR.get()
         prev = self.db.execute("SELECT event_hash FROM events ORDER BY seq DESC LIMIT 1").fetchone()
         row = dict(event_id=str(uuid.uuid4()), stream_id=stream_id, kind=kind,
                    payload=canonical(payload), source_type=source_type, source_ref=source_ref,
@@ -223,6 +241,9 @@ class Lab:
                 expected = json.loads(item["payload"])["content_hash"]
                 if item["content_bytes"] is None or item["content_hash"] != expected or hashlib.sha256(item["content_bytes"]).hexdigest() != expected:
                     return {"ok": False, "checked": count, "error": "snapshot_mismatch", "error_at": item["seq"]}
+            for row in self.db.execute("SELECT p.event_id,p.payload,e.payload AS recorded FROM continuity_packages p JOIN events e ON e.event_id=p.event_id"):
+                if row["payload"] != row["recorded"]:
+                    return {"ok": False, "checked": count, "error": "continuity_package_mismatch", "event_id": row["event_id"]}
             return {"ok": True, "checked": count, "snapshots_checked": len(rows), "head": previous}
 
     def anchor(self) -> dict:

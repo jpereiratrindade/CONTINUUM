@@ -50,7 +50,10 @@ class MCPTests(unittest.TestCase):
         node = invoke('create_node', {'kind': 'question', 'title': 'Questão inicial'})
         invoke('revise_node', {'id': node['id'], 'title': 'Questão revista', 'reason': 'Precisar contexto'})
         history = invoke('trajectory', {'id': node['id']})
-        self.assertEqual(len(history['events']), 2)
+        self.assertEqual([e['kind'] for e in history['events']], ['node_created', 'continuity_prepared', 'node_revised', 'continuity_prepared'])
+        self.assertEqual(history['events'][0]['source_type'], 'mcp_client')
+        self.assertEqual(history['events'][0]['source_ref'], 'mcp:test')
+        self.assertEqual(history['events'][1]['source_type'], 'automation')
         self.assertTrue(invoke('verify', {})['ok'])
 
     def test_invalid_arguments_and_unknown_methods(self):

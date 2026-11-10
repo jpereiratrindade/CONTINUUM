@@ -194,3 +194,41 @@ h3 { margin: 0 0 7px; font-size: 15px; }
 .primary .icon, .subtle .icon { width: 16px; height: 16px; }
 
 .hero-art { height: auto; aspect-ratio: 4 / 3; }
+/* Reference space: writing first; contextual material opens on demand. */
+.workbench-heading { display:flex; align-items:center; justify-content:space-between; gap:20px; margin:6px 0 24px; }
+.workbench-heading h1 { font-size:30px; font-weight:650; margin:0; }
+.reference-layout { display:grid; grid-template-columns:minmax(0,1fr) minmax(230px,290px); gap:24px; align-items:start; }
+.writing-paper { min-width:0; background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:28px; }
+.reference-heading { display:flex; flex-wrap:wrap; gap:10px; align-items:baseline; margin-bottom:14px; }
+.reference-heading h2 { font-size:19px; line-height:1.5; font-weight:600; margin:0; flex:1 1 260px; overflow-wrap:anywhere; }
+.save-status { font-size:11px; color:var(--muted); }
+#working-text { display:block; width:100%; min-height:420px; border:0; padding:16px 0; background:transparent; color:var(--ink); font-size:16px; line-height:1.85; resize:vertical; }
+#working-text::placeholder { color:#60778e; }
+#working-text:focus-visible { outline:2px solid var(--cyan); outline-offset:7px; border-radius:3px; }
+.workspace-history { border-top:1px solid var(--line); padding-top:14px; color:var(--muted); font-size:12px; }
+.workspace-history summary,.context-panel summary { cursor:pointer; }
+.history-event { margin:14px 0; }
+.history-event pre,#remote-note,.source-preview pre { white-space:pre-wrap; overflow-wrap:anywhere; font-size:12px; max-height:440px; overflow:auto; }
+.context-panel { min-width:0; padding:8px 0; }
+.context-heading { margin-bottom:18px; }
+.context-heading h2 { font-size:14px; margin:0 0 5px; font-weight:650; }
+#context-state { font-size:10px; }
+.contribution { border-bottom:1px solid var(--line); padding:16px 0; }
+.contribution summary { font-size:13px; line-height:1.55; color:var(--ink); }
+.contribution summary small { display:block; color:var(--muted); font-size:10px; margin:5px 0 0 15px; }
+.contribution blockquote { border-left:2px solid var(--cyan); margin:14px 0; padding-left:12px; color:#48647b; font-size:12px; white-space:pre-line; overflow-wrap:anywhere; }
+.contribution .toolbar { gap:6px; }
+.contribution button { font-size:11px; padding:6px 8px; }
+.context-details { padding:15px 0; border-bottom:1px solid var(--line); font-size:12px; color:var(--muted); }
+.context-details p { font-size:12px; }
+.related-idea { display:block; text-align:left; border:0; background:transparent; color:#155379; padding:12px 0; width:100%; overflow-wrap:anywhere; }
+button.linklike { background:transparent; border:0; color:#1076a0; font-size:12px; padding:10px 0; cursor:pointer; }
+button.linklike:hover { text-decoration:underline; }
+.sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+#resume .card { padding:16px 18px; box-shadow:none; }
+#resume .card-title { font-size:13px; font-weight:600; }
+#resume h2 { font-size:14px; color:var(--muted); font-weight:600; }
+#reference-provenance { overflow-wrap:anywhere; }
+@media(min-width:1150px) { .shell { grid-template-columns:205px minmax(0,1fr); } .sidebar { padding-inline:10px; } .main-inner { padding:28px clamp(20px,3vw,48px) 70px; } }
+@media(max-width:1140px) { .reference-layout { grid-template-columns:minmax(0,1fr); } .context-panel { padding:18px 0; } }
+@media(max-width:630px) { .writing-paper { padding:20px; } .workbench-heading h1 { font-size:24px; } .workbench-heading { gap:10px; } #working-text { min-height:340px; } .reference-heading h2 { font-size:17px; } }

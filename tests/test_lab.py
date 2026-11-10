@@ -228,7 +228,7 @@ class HttpTests(unittest.TestCase):
         ident=json.loads(body)["id"]
         status,body=self.call("GET",f"/api/trajectory?id={ident}")
         self.assertEqual(status,200)
-        self.assertEqual(len(json.loads(body)["events"]),1)
+        self.assertEqual([e["kind"] for e in json.loads(body)["events"]], ["node_created", "continuity_prepared"])
         status,_=self.call("GET","/not-allowed")
         self.assertEqual(status,404)
 
@@ -284,6 +284,24 @@ class HttpTests(unittest.TestCase):
             status, _ = self.call("GET", path)
             self.assertEqual(status, 400)
 
+    def test_shared_reference_http_contract(self):
+        status, body = self.call("POST", "/api/nodes", {"kind": "idea", "title": "Criar com continuidade"})
+        ident = json.loads(body)["id"]
+        status, body = self.call("POST", "/api/reference/note", {"id": ident, "text": "Esboço preservado", "revision": 0})
+        self.assertEqual(status, 200, body)
+        self.assertEqual(json.loads(body)["revision"], 1)
+        status, body = self.call("GET", "/api/reference?id=" + ident)
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(body)["note"]["text"], "Esboço preservado")
+        self.assertFalse(json.loads(body)["stale"])
+        status, body = self.call("GET", "/api/reference/export?id=" + ident)
+        self.assertEqual(status, 200)
+        self.assertIn("Esboço preservado", body.decode())
+        status, _ = self.call("POST", "/api/reference/note", {"id": ident, "text": "Sobrescrita antiga", "revision": 0})
+        self.assertEqual(status, 400)
+        status, _ = self.call("POST", "/api/reference/note", {"id": ident, "text": "X", "revision": 1}, {"X-Lab-Intent": ""})
+        self.assertEqual(status, 403)
+
     def test_project_svg_assets_are_served(self):
         import xml.etree.ElementTree as ET
         for path in ("/favicon.svg", "/assets/continuum-symbol.svg", "/assets/continuum-icons.svg"):
@@ -305,7 +323,7 @@ class HttpTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(json.loads(response)["question_node"]["id"], node["id"])
         self.assertEqual(len(self.lab.nodes()), 1)
-        self.assertEqual(len(self.lab.trajectory(node["id"])["events"]), 2)
+        self.assertEqual(len([e for e in self.lab.trajectory(node["id"])["events"] if e["kind"] != "continuity_prepared"]), 2)
         status, _ = self.call("POST", "/api/investigations", {**body, "query": "Outra pergunta"})
         self.assertEqual(status, 400)
         status, _ = self.call("POST", "/api/investigations", body, {"X-Lab-Intent": ""})

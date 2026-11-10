@@ -2,6 +2,7 @@
 import json
 import sys
 
+from .core import provenance
 from . import __version__
 from .api import catalog, execute, validate, OPERATIONS
 
@@ -15,6 +16,7 @@ class MCPServer:
         self.allow_writes = allow_writes
         self.initialized = False
         self.ready = False
+        self.client_name = "unknown"
 
     def handle(self, message):
         ident = message.get("id") if isinstance(message, dict) else None
@@ -36,6 +38,7 @@ class MCPServer:
             if method == "initialize":
                 if not isinstance(params.get("protocolVersion"), str) or not isinstance(params.get("capabilities"), dict) or not isinstance(params.get("clientInfo"), dict):
                     return error(-32602, "Expected protocolVersion, capabilities and clientInfo")
+                self.client_name = str(params["clientInfo"].get("name", "unknown"))[:100]
                 self.initialized = True
                 self.ready = False
                 result = {"protocolVersion": PROTOCOL, "serverInfo": {"name": "continuum", "version": __version__},
@@ -57,7 +60,8 @@ class MCPServer:
                 except ValueError as exc:
                     return error(-32602, str(exc))
                 try:
-                    value = execute(self.lab, name, args, allow_writes=self.allow_writes)
+                    with provenance("mcp_client", "mcp:" + self.client_name):
+                        value = execute(self.lab, name, args, allow_writes=self.allow_writes)
                     result = {"content": [{"type": "text", "text": json.dumps(value, ensure_ascii=False)}], "isError": False}
                 except (ValueError, PermissionError, OSError) as exc:
                     result = {"content": [{"type": "text", "text": str(exc)}], "isError": True}

@@ -14,7 +14,7 @@ Marca e ícones essenciais são incorporados ao HTML para evitar espaços vazios
 
 ## Preservação de perguntas
 
-O campo Explorar questões mantém o último rascunho no `localStorage` da origem atual. Recarregar ou reabrir a mesma origem restaura o texto, sem executar uma investigação automaticamente. Se o armazenamento estiver bloqueado ou cheio, a interface informa a falha.
+O campo de entrada em Continuar mantém o último rascunho no `localStorage` da origem atual. Recarregar ou reabrir a mesma origem restaura o texto, sem executar uma investigação automaticamente. Se o armazenamento estiver bloqueado ou cheio, a interface informa a falha.
 
 Ao submeter, a interface usa `POST /api/investigations` com `query` e um UUID `request_id`. O núcleo registra uma questão com o texto completo no corpo e título de até 240 caracteres antes de recuperar o contexto. A questão permanece em Trajetórias e fica acessível pelo MCP. Repetir o mesmo identificador e texto reutiliza o registro, mesmo após revisão da trajetória; reutilizá-lo com outro texto falha. Consultas `GET /api/ask` continuam sem efeitos de escrita.
 
@@ -23,3 +23,5 @@ A recuperação de rascunho depende do mesmo navegador e origem (protocolo, host
 ## Verificação no navegador
 
 O teste opcional `tests/browser_smoke.cjs` usa Playwright e cria seu próprio servidor/banco temporário. Valida navegação, SVGs, rascunhos, submissão, falhas de rede e reenvio após perda da resposta, além de cinco larguras de tela. Instalar Playwright em um diretório de desenvolvimento separado e executar com `NODE_PATH` apontando para seu `node_modules`; `CONTINUUM_SCREENSHOTS` define a pasta opcional das capturas. O aplicativo continua sem dependências externas.
+
+Na versão 0.3.0, a tela inicial abre o espaço de referência compartilhado com texto de trabalho preservado, contribuições recolhidas e histórico sob demanda. O símbolo e as cores do LAC permanecem. Consulte [convergência e automação](06-CONVERGENCIA.md).

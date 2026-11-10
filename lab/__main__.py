@@ -49,7 +49,8 @@ def main():
         elif args.command == "register":
             print(json.dumps(lab.register_source(args.path,args.label),ensure_ascii=False,indent=2))
         elif args.command == "scan":
-            print(json.dumps(lab.scan(),ensure_ascii=False,indent=2))
+            from .api import execute
+            print(json.dumps(execute(lab, "scan", {}, allow_writes=True),ensure_ascii=False,indent=2))
         elif args.command == "verify":
             print(json.dumps(lab.verify(),ensure_ascii=False,indent=2))
         elif args.command == "anchor":
