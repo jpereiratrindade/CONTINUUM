@@ -242,3 +242,21 @@ button.linklike:hover { text-decoration:underline; }
 .text-proposal summary small { display: block; font-weight: 400; color: #58718a; margin-top: 5px; }
 .proposal-text { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; line-height: 1.7; }
 .history-event pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+.workspace-actions { align-items: center; margin: 10px 0 18px; gap: 14px; }
+.workspace-transformations { border-top: 1px solid var(--line); padding-top: 18px; margin-top: 14px; }
+.transformations-header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 10px; }
+.transformations-header h3 { font-size: 14px; margin: 0; font-weight: 650; }
+.inline-transform-form { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin-top: 10px; padding: 12px; background: #f7fafd; border: 1px solid var(--line); border-radius: 8px; }
+.inline-transform-form label { display: grid; gap: 4px; font-size: 11px; font-weight: 700; }
+.inline-transform-form .grow { flex: 1 1 200px; }
+.inline-transform-form input, .inline-transform-form select { border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; font-size: 12px; background: white; }
+.transformation-item { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 14px; margin: 8px 0; background: #f8fbfe; border: 1px solid var(--line); border-radius: 8px; }
+.transformation-meta { font-size: 12px; min-width: 0; flex: 1 1 240px; }
+.transformation-meta strong { display: block; font-size: 13px; color: var(--ink); overflow-wrap: anywhere; }
+.transform-action-box { margin: 14px 0; }
+.transform-action-box > summary { list-style: none; cursor: pointer; display: inline-flex; }
+.transform-action-box > summary::-webkit-details-marker { display: none; }
+.transform-form { margin-top: 12px; padding: 16px; background: #f7fafd; border: 1px solid var(--line); border-radius: 10px; }
+.workspace-git { border-top: 1px solid var(--line); padding-top: 14px; margin-top: 12px; color: var(--muted); font-size: 12px; }
+.workspace-git summary { cursor: pointer; }
+.workspace-git pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 11px; background: #eef6fb; padding: 11px; border-radius: 8px; max-height: 380px; overflow: auto; }

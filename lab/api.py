@@ -35,6 +35,9 @@ OPERATIONS = {
     "create_node": ("Registrar declaração do usuário.", {"kind": field(enum=sorted(VALID_KINDS)), "title": field(minLength=1, maxLength=240), "body": field(maxLength=20000)}, ["kind", "title"], True),
     "revise_node": ("Revisar declaração com justificativa e preservar histórico.", {"id": field(), "title": field(minLength=1, maxLength=240), "body": field(maxLength=20000), "status": field(enum=sorted(VALID_STATUSES)), "reason": field(minLength=1)}, ["id", "reason"], True),
     "add_link": ("Declarar relação; não equivale a confirmação científica.", {"source_id": field(), "target_id": field(), "relation": field(enum=sorted(VALID_RELATIONS)), "reason": field(minLength=1), "state": field(enum=sorted(VALID_LINK_STATES))}, ["source_id", "target_id", "relation", "reason"], True),
+    "transform_node": ("Desdobrar percurso atual em novo elemento vinculado (ex.: questão -> hipótese/experimento).", {"source_id": field(), "kind": field(enum=sorted(VALID_KINDS)), "title": field(minLength=1, maxLength=240), "body": field(maxLength=20000), "relation": field(enum=sorted(VALID_RELATIONS)), "reason": field(maxLength=2000), "state": field(enum=sorted(VALID_LINK_STATES))}, ["source_id", "kind", "title"], True),
+    "git_history": ("Consultar commits e diff do percurso versionado no Git do workspace.", {"id": field()}, ["id"], False),
+    "git_checkpoint": ("Materializar e versionar estado atual do percurso em commit Git no workspace.", {"id": field(), "message": field(maxLength=240)}, ["id"], True),
 }
 
 
@@ -76,7 +79,15 @@ def _execute(lab, name, args, *, allow_writes=False):
         if name == "review_proposal":
             from .proposals import review
             return review(lab, args['id'], args['proposal_id'], args['state'], args['revision'])
-        from .continuity import reference, save_note, refresh, feedback, export_reference
+        from .continuity import reference, save_note, refresh, feedback, export_reference, transform_node, git_history, git_checkpoint
+        if name == "transform_node":
+            return transform_node(lab, args["source_id"], args["kind"], args["title"],
+                                  args.get("body", ""), args.get("relation", "evolves_into"),
+                                  args.get("reason", ""), args.get("state", "endorsed"))
+        if name == "git_history":
+            return git_history(lab, args["id"])
+        if name == "git_checkpoint":
+            return git_checkpoint(lab, args["id"], args.get("message", ""))
         if name == "export_reference":
             return export_reference(lab, args["id"])
         if name == "reference":

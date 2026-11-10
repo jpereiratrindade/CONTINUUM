@@ -3,6 +3,9 @@ const $ = selector => document.querySelector(selector);
 const $$ = selector => Array.from(document.querySelectorAll(selector));
 const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const QUESTION_KEY = "continuum.question.v1";
+const KIND_LABEL = {question:"Questão",idea:"Ideia",hypothesis:"Hipótese",decision:"Decisão",experiment:"Experimento",opportunity:"Oportunidade"};
+const STATUS_LABEL = {open:"Aberto",active:"Em andamento",suspended:"Suspenso",resolved:"Resolvido"};
+const RELATION_LABEL = {evolves_into:"Evolui para",supports:"Pode sustentar",contradicts:"Contradiz / tensiona",depends_on:"Depende de",relates_to:"Relaciona-se a"};
 let questionState = {draft: "", submitted: null};
 let allNodes = [], nextOffset = null, active = null, opening = 0, asking = false;
 function uuid() {
@@ -40,7 +43,7 @@ function show(view) {
   if(view==="laboratorio")renderLaboratory().catch(ex=>notify(ex.message,true));
 }
 function nodeCard(node) {
-  return `<article class="card"><div class="card-title">${escapeHtml(node.title)}</div><div class="meta">${escapeHtml(node.status)}</div><button class="linklike" data-open-node="${escapeHtml(node.id)}">Continuar →</button></article>`;
+  return `<article class="card"><div class="card-title">${escapeHtml(node.title)}</div><div class="meta">${escapeHtml(KIND_LABEL[node.kind]||node.kind)} · ${escapeHtml(STATUS_LABEL[node.status]||node.status)}</div><button class="linklike" data-open-node="${escapeHtml(node.id)}">Continuar →</button></article>`;
 }
 async function loadNodes(append=false) {
   const result=await request(`/api/nodes?limit=100&offset=${append?(nextOffset||0):0}`);
@@ -106,6 +109,9 @@ async function openNode(id) {
   $("#search-form").classList.add("hidden");
   $("#reference-history").replaceChildren();
   $(".workspace-history").open=false;
+  $("#reference-git").replaceChildren();
+  $(".workspace-git").open=false;
+  $("#git-status").textContent="";
   updateStatus(session,session.conflict?"Rascunho local · conciliação necessária":session.dirty?"Rascunho restaurado":"Preservado");
   conflictUI(session);renderReference(data);show("explorar");
   if(session.dirty&&!session.conflict)queueSave(session);
@@ -131,6 +137,26 @@ function renderProposals(data) {
   const reviewed=proposals.filter(p=>p.state!=="pending");
   $("#note-proposals").innerHTML=(pending.length?`<h3>${pending.length===1?"Uma proposta para examinar":pending.length+" propostas para examinar"}</h3>`:"")+pending.map(p=>`<details class="text-proposal"><summary title="${escapeHtml(p.source_ref)}">Proposta de ${escapeHtml(originLabel(p))}<small>Ainda não incorporada · ${escapeHtml(new Date(p.recorded_at).toLocaleString("pt-BR"))}</small></summary><p class="small muted">Se incorporar, este trecho será acrescentado ao final do texto preservado.</p><pre class="proposal-text">${escapeHtml(p.text)}</pre><div class="toolbar"><button class="subtle" data-accept-proposal="${escapeHtml(p.id)}" data-revision="${data.note.revision}">Incorporar ao final</button><button class="subtle" data-dismiss-proposal="${escapeHtml(p.id)}">Dispensar</button></div></details>`).join("")+(reviewed.length?`<details class="reviewed-proposals"><summary>Propostas examinadas (${reviewed.length})</summary>${reviewed.map(p=>`<details><summary>${p.state==="incorporated"?"Incorporada":"Dispensada"} · ${escapeHtml(originLabel(p))}</summary><pre class="proposal-text">${escapeHtml(p.text)}</pre></details>`).join("")}</details>`:"");
 }
+function renderTransformations(data) {
+  const items=data.transformations || [];
+  const key=JSON.stringify(items)+data.node.status+data.node.kind;
+  if(active.transformKey===key)return;
+  active.transformKey=key;
+  $("#reference-badge").textContent=`${KIND_LABEL[data.node.kind]||data.node.kind} · ${STATUS_LABEL[data.node.status]||data.node.status}`;
+  if($("#revise-status"))$("#revise-status").value=data.node.status;
+  $("#reference-transformations").innerHTML=items.length?items.map(t=>{
+    const arrow=t.direction==="outgoing"?"→":"←";
+    const rel=RELATION_LABEL[t.relation]||t.relation;
+    const n=t.node;
+    return `<div class="transformation-item"><div class="transformation-meta"><span class="chip">${escapeHtml(KIND_LABEL[n.kind]||n.kind)} · ${escapeHtml(STATUS_LABEL[n.status]||n.status)}</span> <span class="small muted">${arrow} ${escapeHtml(rel)}</span><strong>${escapeHtml(n.title)}</strong><div class="small muted">${escapeHtml(t.reason)}</div></div><button class="subtle" type="button" data-open-node="${escapeHtml(n.id)}">Abrir →</button></div>`;
+  }).join(""):'<p class="small muted">Nenhuma transformação ou vínculo registrado ainda. Desdobre uma hipótese, ideia, decisão ou experimento abaixo para avançar o percurso.</p>';
+}
+async function renderGitHistory(id) {
+  const g=await request(`/api/reference/git?id=${encodeURIComponent(id)}`);
+  if(!g.versioned){$("#reference-git").innerHTML='<p class="small muted">Ainda não há commit Git para este percurso. Clique em "Versionar no Git" para registrar um marco.</p>';return;}
+  $("#git-status").textContent=`Git HEAD: ${g.commits[0]?.hash || ""}`;
+  $("#reference-git").innerHTML=`<p class="small muted">Arquivo: <code>${escapeHtml(g.path)}</code></p>`+g.commits.map(c=>`<div class="small"><code>${escapeHtml(c.hash)}</code> · ${escapeHtml(new Date(c.date).toLocaleString("pt-BR"))} — <strong>${escapeHtml(c.subject)}</strong></div>`).join("")+(g.diff?`<h4>Último diff (HEAD)</h4><pre>${escapeHtml(g.diff)}</pre>`:"");
+}
 function renderReference(data) {
   if(!active||data.node.id!==active.id)return;
   const author=data.authorship;
@@ -138,6 +164,7 @@ function renderReference(data) {
   $("#note-origin").title=last?.source_ref || "";
   $("#note-origin").textContent=last?`${last.kind==="working_note_saved"?"Última edição preservada":"Registro inicial"}: ${originLabel(last)} · ${new Date(last.recorded_at).toLocaleString("pt-BR")} · ${author.edits} ${author.edits===1?"edição registrada":"edições registradas"}${author.proposal?" · proposta de "+originLabel(author.proposal)+" incorporada":""}`:"Origem não informada";
   renderProposals(data);
+  renderTransformations(data);
   const p=data.package;
   $("#context-state").textContent=data.stale?"Atualização das referências pendente":"Referências aproximadas automaticamente";
   if(!p){$("#reference-contributions").innerHTML='<p class="muted small">O contexto será preparado na próxima observação das fontes.</p>';return;}
@@ -194,6 +221,19 @@ async function actions(event){
  const target=event.target.closest("button");if(!target)return;
  if(target.dataset.openNode)return openNode(target.dataset.openNode);
  if(target.id==="export-work"&&active){await saveNote(active);if(active.dirty||active.conflict)throw Error("Conclua o salvamento para exportar o texto compartilhado.");location.href=`/api/reference/export?id=${encodeURIComponent(active.id)}`;return;}
+ if(target.id==="git-checkpoint"&&active){
+  target.disabled=true;
+  try{
+    await saveNote(active);
+    if(active.dirty||active.conflict)throw Error("Conclua o salvamento antes de versionar no Git.");
+    const res=await request("/api/reference/git",{id:active.id});
+    $("#git-status").textContent=res.head?`Git HEAD: ${res.head}${res.committed?" (novo commit)":" (sem alterações)"}`:"";
+    $(".workspace-git").open=true;
+    await renderGitHistory(active.id);
+    notify(res.committed?`Marco versionado no Git (${res.head}).`:"O arquivo Git já está atualizado com esta revisão.");
+  }finally{target.disabled=false;}
+  return;
+ }
  if(target.id==="show-changes"){$(".workspace-history").open=true;$(".workspace-history").scrollIntoView({behavior:"smooth",block:"nearest"});return;}
  if(target.id==="show-proposals"){$("#note-proposals").scrollIntoView({behavior:"smooth",block:"start"});return;}
  if(target.id==="more-nodes")return loadNodes(true);
@@ -241,10 +281,13 @@ async function init(){
  $("#new-idea").addEventListener("click",()=>{if(questionState.submitted?.node_id){questionState={draft:"",submitted:null};$("#query").value="";store(QUESTION_KEY,questionState);}$("#search-form").classList.remove("hidden");$("#query").focus();});
  $("#resolve-note").addEventListener("click",async()=>{if(!active?.remote)return;active.revision=active.remote.revision;active.conflict=false;conflictUI(active);await saveNote(active);});
  $("#use-remote-note").addEventListener("click",()=>{if(!active?.remote)return;active.text=active.remote.text;active.revision=active.remote.revision;active.dirty=false;active.conflict=false;$("#working-text").value=active.text;remove(`continuum.note.${active.id}`);conflictUI(active);updateStatus(active,"Versão compartilhada");});
- $(".workspace-history").addEventListener("toggle",async event=>{if(event.target.open&&active){try{const data=await request(`/api/trajectory?id=${encodeURIComponent(active.id)}`);$("#reference-history").innerHTML=data.events.map(e=>`<details class="history-event"><summary>${escapeHtml(e.kind==="working_note_saved"?"Edição do texto":e.kind==="note_proposed"?"Proposta recebida":e.kind==="note_proposal_reviewed"?"Proposta examinada":e.kind)} · ${escapeHtml(new Date(e.recorded_at).toLocaleString("pt-BR"))} · ${escapeHtml(originLabel(e))}</summary>${e.kind==="working_note_saved"?`${e.payload.proposal?`<p class="small">Proposta de ${escapeHtml(originLabel(e.payload.proposal))} incorporada.</p>`:""}<p class="small muted">Cliente registrado: ${escapeHtml(e.source_ref)}${e.payload.proposal?" · proposta: "+escapeHtml(e.payload.proposal.source_ref):""}</p><h4>Antes</h4><pre>${escapeHtml(e.payload.before.text)}</pre><h4>Depois</h4><pre>${escapeHtml(e.payload.after.text)}</pre>`:`<pre>${escapeHtml(JSON.stringify(e.payload,null,2))}</pre>`}</details>`).join("");}catch(ex){notify(ex.message,true);}}});
+ $(".workspace-git").addEventListener("toggle",async event=>{if(event.target.open&&active){try{await renderGitHistory(active.id);}catch(ex){notify(ex.message,true);}}});
+ $(".workspace-history").addEventListener("toggle",async event=>{if(event.target.open&&active){try{const data=await request(`/api/trajectory?id=${encodeURIComponent(active.id)}`);$("#reference-history").innerHTML=data.events.map(e=>`<details class="history-event"><summary>${escapeHtml(e.kind==="working_note_saved"?"Edição do texto":e.kind==="note_proposed"?"Proposta recebida":e.kind==="note_proposal_reviewed"?"Proposta examinada":e.kind==="git_checkpoint_recorded"?"Versionado no Git":e.kind)} · ${escapeHtml(new Date(e.recorded_at).toLocaleString("pt-BR"))} · ${escapeHtml(originLabel(e))}</summary>${e.kind==="working_note_saved"?`${e.payload.proposal?`<p class="small">Proposta de ${escapeHtml(originLabel(e.payload.proposal))} incorporada.</p>`:""}<p class="small muted">Cliente registrado: ${escapeHtml(e.source_ref)}${e.payload.proposal?" · proposta: "+escapeHtml(e.payload.proposal.source_ref):""}</p><h4>Antes</h4><pre>${escapeHtml(e.payload.before.text)}</pre><h4>Depois</h4><pre>${escapeHtml(e.payload.after.text)}</pre>`:`<pre>${escapeHtml(JSON.stringify(e.payload,null,2))}</pre>`}</details>`).join("");}catch(ex){notify(ex.message,true);}}});
  $$(".nav").forEach(btn=>btn.addEventListener("click",()=>show(btn.dataset.view)));
  $("#brand").addEventListener("click",event=>{event.preventDefault();show("explorar");});
  document.body.addEventListener("click",event=>actions(event).catch(ex=>notify(ex.message,true)));
+ onForm("#revise-form",async()=>{if(!active)return;await saveNote(active);await request("/api/nodes/revise",{id:active.id,status:$("#revise-status").value,reason:$("#revise-reason").value});$("#revise-reason").value="";$(".revise-status-box").open=false;await pollReference();await loadNodes();notify("Estado do percurso revisado e preservado no histórico.");});
+ onForm("#transform-form",async()=>{if(!active)return;await saveNote(active);const res=await request("/api/reference/transform",{source_id:active.id,kind:$("#transform-kind").value,relation:$("#transform-relation").value,title:$("#transform-title").value,body:$("#transform-body").value,reason:$("#transform-reason").value});$("#transform-form").reset();$(".transform-action-box").open=false;notify("Transformação registrada e vinculada.");await loadNodes();await openNode(res.node.id);});
  onForm("#node-form",async()=>{const n=await request("/api/nodes",{kind:$("#node-kind").value,title:$("#node-title").value,body:$("#node-body").value});$("#node-form").reset();await loadNodes();await openNode(n.id);});
  onForm("#source-form",async()=>{await request("/api/sources",{label:$("#source-label").value,path:$("#source-path").value});await request("/api/scan",{});await renderSources();await pollReference();notify("Fonte observada. Contextos preparados.");});
  onForm("#link-form",async()=>{await request("/api/links",{source_id:$("#link-source").value,target_id:$("#link-target").value,relation:$("#link-relation").value,state:$("#link-state").value,reason:$("#link-reason").value});$("#link-form").reset();notify("Relação preservada.");});

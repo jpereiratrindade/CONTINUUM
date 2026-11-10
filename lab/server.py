@@ -148,6 +148,8 @@ def create_handler(lab: Lab, ollama_model: str = "", mcp_allow_writes: bool = Fa
             elif path == "/api/reference/export":
                 result = execute(lab, "export_reference", {"id": arg("id")})
                 self._send(200, result["markdown"].encode("utf-8"), "text/markdown; charset=utf-8", "continuum-texto.md")
+            elif path == "/api/reference/git":
+                self._send(200, execute(lab, "git_history", {"id": arg("id")}))
             elif path == "/api/reference":
                 self._send(200, execute(lab, "reference", {"id": arg("id")}))
             elif path in ("/api/nodes", "/api/node", "/api/documents", "/api/document", "/api/events", "/api/verify", "/api/anchor"):
@@ -234,8 +236,16 @@ def create_handler(lab: Lab, ollama_model: str = "", mcp_allow_writes: bool = Fa
             if not isinstance(data,dict):
                 raise ValueError("Corpo precisa ser um objeto JSON")
             path=urllib.parse.urlsplit(self.path).path
-            if path in ("/api/reference/note", "/api/reference/refresh", "/api/reference/review", "/api/reference/propose", "/api/reference/proposal/review"):
-                operation = {"/api/reference/note": "save_note", "/api/reference/refresh": "refresh_reference", "/api/reference/review": "review_contribution", "/api/reference/propose": "propose_note", "/api/reference/proposal/review": "review_proposal"}[path]
+            if path in ("/api/reference/note", "/api/reference/refresh", "/api/reference/review", "/api/reference/propose", "/api/reference/proposal/review", "/api/reference/transform", "/api/reference/git"):
+                operation = {
+                    "/api/reference/note": "save_note",
+                    "/api/reference/refresh": "refresh_reference",
+                    "/api/reference/review": "review_contribution",
+                    "/api/reference/propose": "propose_note",
+                    "/api/reference/proposal/review": "review_proposal",
+                    "/api/reference/transform": "transform_node",
+                    "/api/reference/git": "git_checkpoint",
+                }[path]
                 result = execute(lab, operation, data, allow_writes=True)
             elif path == "/api/investigations":
                 result = execute(lab, "investigate", data, allow_writes=True)

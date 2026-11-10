@@ -31,7 +31,7 @@ def provenance(source_type, source_ref):
 
 
 FILE_TYPES = {".md", ".markdown", ".txt", ".tex"}
-SKIP_DIRS = {".git", ".venv", "__pycache__", "node_modules", "build", "dist", "output", ".cache"}
+SKIP_DIRS = {".git", ".venv", "__pycache__", "node_modules", "build", "dist", "output", ".cache", "workspace", "data", "percursos"}
 MAX_SIZE = 1_000_000
 MAX_FILES_PER_SOURCE = 3_000
 VALID_KINDS = {"question", "idea", "hypothesis", "decision", "experiment", "opportunity"}

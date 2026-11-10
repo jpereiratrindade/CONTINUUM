@@ -156,3 +156,46 @@ class ContinuityTests(unittest.TestCase):
         self.assertTrue(all('secret' not in d['path'] for d in evidence))
         with self.assertRaises(PermissionError):
             execute(self.lab,'save_note',{'id':self.node['id'],'text':'X','revision':0})
+
+    def test_transformations_and_git_versioning_workflow(self):
+        # 1. Transform question into a hypothesis via transform_node
+        res = self.call(
+            'transform_node',
+            source_id=self.node['id'],
+            kind='hypothesis',
+            title='A convergência emerge quando pacotes lexicais cruzam transformações versionadas em Git',
+            body='Hipótese desdobrada a partir da questão central.',
+            relation='evolves_into',
+            reason='Desdobrar a questão em uma hipótese testável'
+        )
+        hyp = res['node']
+        self.assertEqual(hyp['kind'], 'hypothesis')
+        q_ref = self.call('reference', id=self.node['id'])
+        self.assertEqual(len(q_ref['transformations']), 1)
+        self.assertEqual(q_ref['transformations'][0]['direction'], 'outgoing')
+        self.assertEqual(q_ref['transformations'][0]['relation'], 'evolves_into')
+        self.assertEqual(q_ref['transformations'][0]['node']['id'], hyp['id'])
+
+        h_ref = self.call('reference', id=hyp['id'])
+        self.assertEqual(len(h_ref['transformations']), 1)
+        self.assertEqual(h_ref['transformations'][0]['direction'], 'incoming')
+        self.assertEqual(h_ref['transformations'][0]['node']['id'], self.node['id'])
+
+        # 2. Version the question trajectory in Git (commit 1)
+        g1 = self.call('git_checkpoint', id=self.node['id'])
+        self.assertTrue(g1['versioned'])
+        self.assertTrue(g1['committed'])
+        self.assertEqual(len(g1['commits']), 1)
+        # Calling git_checkpoint again without changes is idempotent (no empty commit)
+        g1_repeat = self.call('git_checkpoint', id=self.node['id'])
+        self.assertFalse(g1_repeat['committed'])
+        self.assertEqual(len(g1_repeat['commits']), 1)
+
+        # 3. Advance working text and record a second Git commit, inspecting diff
+        self.call('save_note', id=self.node['id'], text='Desenvolvimento com hipótese vinculada.\n\nPróximo movimento: validar no Git.', revision=0)
+        g2 = self.call('git_checkpoint', id=self.node['id'])
+        self.assertTrue(g2['committed'])
+        self.assertEqual(len(g2['commits']), 2)
+        self.assertIn('+Desenvolvimento com hipótese vinculada.', g2['diff'])
+        self.assertIn('evolves_into', Path(g2['path']).read_text(encoding='utf-8'))
+        self.assertTrue(self.call('verify')['ok'])

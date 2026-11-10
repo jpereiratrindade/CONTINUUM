@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
+import subprocess
 import unicodedata
 
 from .core import canonical, digest, utcnow
@@ -167,6 +169,45 @@ def refresh(lab, ident=None):
     return lab._tx(run)
 
 
+def transformations(lab, ident):
+    rows = lab.db.execute('''
+        SELECT l.id AS link_id, l.source_id, l.target_id, l.relation, l.state, l.reason, l.updated_at AS link_updated_at,
+               n.id AS node_id, n.kind, n.title, n.status, n.updated_at
+        FROM links l
+        JOIN nodes n ON n.id = CASE WHEN l.source_id = ? THEN l.target_id ELSE l.source_id END
+        WHERE l.source_id = ? OR l.target_id = ?
+        ORDER BY l.updated_at DESC, l.id
+    ''', (ident, ident, ident)).fetchall()
+    items = []
+    for r in rows:
+        items.append({
+            'link_id': r['link_id'],
+            'direction': 'outgoing' if r['source_id'] == ident else 'incoming',
+            'relation': r['relation'],
+            'state': r['state'],
+            'reason': r['reason'],
+            'link_updated_at': r['link_updated_at'],
+            'node': {
+                'id': r['node_id'],
+                'kind': r['kind'],
+                'title': r['title'],
+                'status': r['status'],
+                'updated_at': r['updated_at'],
+            }
+        })
+    return items
+
+
+def transform_node(lab, source_id, kind, title, body='', relation='evolves_into', reason='', state='endorsed'):
+    lab.node(source_id)
+    effective_reason = (reason or '').strip() or f'Desdobramento em {kind}: {title.strip()[:120]}'
+    target = lab.create_node(kind, title, body)
+    link = lab.add_link(source_id, target['id'], relation, effective_reason, state)
+    refresh(lab, source_id)
+    refresh(lab, target['id'])
+    return {'source_id': source_id, 'node': target, 'link': link}
+
+
 def reference(lab, ident):
     # One read snapshot even when another process is contributing concurrently.
     with lab.lock:
@@ -184,6 +225,7 @@ def reference(lab, ident):
             from .proposals import authorship, list_proposals
             return {'node': node, 'note': working, 'package': package, 'package_event_id': row['event_id'] if row else None,
                     'authorship': authorship(lab, ident), 'proposals': list_proposals(lab, ident),
+                    'transformations': transformations(lab, ident),
                     'stale': not row or row['basis_hash'] != basis(lab, node, working), 'feedback': feedback}
         finally:
             if owns_transaction:
@@ -211,10 +253,83 @@ def feedback(lab, ident, suggestion_id, state):
 def export_reference(lab, ident):
     current = reference(lab, ident)
     package = current['package']
-    lines = ['# ' + current['node']['title'].replace('\n', ' '), '', current['note']['text'], '',
+    node = current['node']
+    lines = ['# ' + node['title'].replace('\n', ' '), '',
+             f"Natureza: `{node['kind']}` · Estado: `{node['status']}`", '',
+             current['note']['text'], '',
              '## Referência persistente', '', f"Percurso: `{ident}` · revisão do texto: {current['note']['revision']}",
-             f"Pacote: `{current['package_event_id'] or 'não preparado'}`", '', '## Fontes aproximadas', '']
+             f"Pacote: `{current['package_event_id'] or 'não preparado'}`"]
+    if current['transformations']:
+        lines.extend(['', '## Transformações e vínculos', ''])
+        for t in current['transformations']:
+            arrow = '→' if t['direction'] == 'outgoing' else '←'
+            lines.append(f"- {arrow} **{t['relation']}** ({t['state']}) · [{t['node']['kind']}] {t['node']['title']} (`{t['node']['id']}`) — {t['reason']}")
+    lines.extend(['', '## Fontes aproximadas', ''])
     for doc in package['evidence'] if package else []:
         lines.append(f"- {doc['title']} · snapshot `{doc['version_event_id']}` · SHA-256 `{doc['content_hash']}`")
     lines.extend(['', 'Referências aproximadas por termos em comum; conferir o contexto antes de interpretar.'])
     return {'markdown': '\n'.join(lines) + '\n'}
+
+
+def _git_run(cwd: Path, *args: str) -> subprocess.CompletedProcess:
+    return subprocess.run(['git', *args], cwd=cwd, text=True, capture_output=True, timeout=10, check=False)
+
+
+def _ensure_workspace_git(lab) -> Path:
+    if any(lab.workspace == Path(root['path']) or lab.workspace.is_relative_to(Path(root['path'])) for root in lab.sources()):
+        raise ValueError('O workspace não pode ficar dentro de uma fonte observada')
+    lab.workspace.mkdir(parents=True, exist_ok=True)
+    git_dir = lab.workspace / '.git'
+    if not git_dir.exists():
+        _git_run(lab.workspace, 'init', '-b', 'main')
+        _git_run(lab.workspace, 'config', 'user.name', 'CONTINUUM Lab')
+        _git_run(lab.workspace, 'config', 'user.email', 'continuum@local.lab')
+    return lab.workspace
+
+
+def git_history(lab, ident: str) -> dict:
+    lab.node(ident)
+    filename = f'percurso-{ident}.md'
+    dest = lab.workspace / filename
+    if not (lab.workspace / '.git').exists() or not dest.exists():
+        return {'versioned': False, 'path': str(dest), 'commits': [], 'diff': ''}
+    log_res = _git_run(lab.workspace, 'log', '-n', '15', '--pretty=format:%h|%cI|%s', '--', filename)
+    commits = []
+    for line in log_res.stdout.splitlines():
+        parts = line.split('|', 2)
+        if len(parts) == 3:
+            commits.append({'hash': parts[0], 'date': parts[1], 'subject': parts[2]})
+    diff_res = _git_run(lab.workspace, 'show', '--stat', '--patch', '--format=', 'HEAD', '--', filename)
+    return {
+        'versioned': bool(commits),
+        'path': str(dest),
+        'commits': commits,
+        'diff': diff_res.stdout[:12000] if commits else ''
+    }
+
+
+def git_checkpoint(lab, ident: str, message: str = '') -> dict:
+    current = reference(lab, ident)
+    ws = _ensure_workspace_git(lab)
+    filename = f'percurso-{ident}.md'
+    dest = ws / filename
+    markdown = export_reference(lab, ident)['markdown']
+    dest.write_text(markdown, encoding='utf-8')
+    _git_run(ws, 'add', filename)
+    status_res = _git_run(ws, 'status', '--porcelain', '--', filename)
+    committed = False
+    if status_res.stdout.strip():
+        node = current['node']
+        rev = current['note']['revision']
+        commit_msg = (message or '').strip() or f"{node['kind']}({node['status']}): {node['title'][:72]} [rev {rev}]"
+        commit_res = _git_run(ws, 'commit', '-m', commit_msg[:240], '--', filename)
+        committed = commit_res.returncode == 0
+    hist = git_history(lab, ident)
+    head_hash = hist['commits'][0]['hash'] if hist['commits'] else None
+    if committed and head_hash:
+        lab._tx(lambda: lab._append(
+            ident, 'git_checkpoint_recorded',
+            {'path': str(dest), 'commit': head_hash, 'revision': current['note']['revision']},
+            source_type='user', source_ref='git-workspace', evidence_state='generated'
+        ))
+    return {**hist, 'committed': committed, 'head': head_hash}

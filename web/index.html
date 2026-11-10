@@ -91,7 +91,7 @@
           </form>
           <div id="reference-workspace" class="reference-layout hidden">
             <article class="writing-paper">
-              <div class="reference-heading"><h2 id="reference-title"></h2><span id="note-status" class="save-status" role="status"></span></div>
+              <div class="reference-heading"><span id="reference-badge" class="chip"></span><h2 id="reference-title"></h2><span id="note-status" class="save-status" role="status"></span></div>
               <div class="note-origin small muted"><span id="note-origin"></span> <button id="show-changes" class="linklike">Ver alterações</button> <button id="show-proposals" class="linklike hidden"></button></div>
               <label for="working-text" class="sr-only">Texto em desenvolvimento</label>
               <textarea id="working-text" maxlength="20000" placeholder="Continue aqui. Uma associação, um esboço, um caminho a experimentar…"></textarea>
@@ -100,7 +100,70 @@
                 <details><summary>Ver texto compartilhado</summary><pre id="remote-note"></pre></details>
                 <div class="toolbar"><button id="resolve-note" class="subtle" type="button">Salvar meu texto como nova versão</button><button id="use-remote-note" class="subtle" type="button">Usar versão compartilhada</button></div>
               </div>
-              <button id="export-work" class="linklike" type="button">Exportar texto · MD</button>
+              <div class="workspace-actions toolbar">
+                <button id="export-work" class="linklike" type="button">Exportar texto · MD</button>
+                <button id="git-checkpoint" class="subtle" type="button">Versionar no Git</button>
+                <span id="git-status" class="small muted"></span>
+              </div>
+              <section class="workspace-transformations" aria-label="Transformações do percurso">
+                <div class="transformations-header">
+                  <h3>Transformações e desdobramentos</h3>
+                  <details class="revise-status-box">
+                    <summary class="linklike">Revisar estado</summary>
+                    <form id="revise-form" class="inline-transform-form">
+                      <label>Estado
+                        <select id="revise-status">
+                          <option value="open">Aberto (open)</option>
+                          <option value="active">Em andamento (active)</option>
+                          <option value="suspended">Suspenso (suspended)</option>
+                          <option value="resolved">Resolvido (resolved)</option>
+                        </select>
+                      </label>
+                      <label class="grow">Justificativa da revisão
+                        <input id="revise-reason" required maxlength="2000" placeholder="Por que o estado deste percurso mudou?">
+                      </label>
+                      <button class="subtle" type="submit">Preservar estado</button>
+                    </form>
+                  </details>
+                </div>
+                <div id="reference-transformations"></div>
+                <details class="transform-action-box">
+                  <summary class="subtle">+ Desdobrar em hipótese, ideia, decisão ou experimento</summary>
+                  <form id="transform-form" class="stack transform-form">
+                    <div class="link-form">
+                      <label>Transformar em
+                        <select id="transform-kind">
+                          <option value="hypothesis">Hipótese</option>
+                          <option value="idea">Ideia</option>
+                          <option value="decision">Decisão declarada</option>
+                          <option value="experiment">Experimento</option>
+                          <option value="opportunity">Oportunidade candidata</option>
+                          <option value="question">Questão derivada</option>
+                        </select>
+                      </label>
+                      <label>Relação com o percurso atual
+                        <select id="transform-relation">
+                          <option value="evolves_into">Evolui para (evolves_into)</option>
+                          <option value="supports">Pode sustentar (supports)</option>
+                          <option value="contradicts">Contradiz / tensiona (contradicts)</option>
+                          <option value="depends_on">Depende de (depends_on)</option>
+                          <option value="relates_to">Relaciona-se a (relates_to)</option>
+                        </select>
+                      </label>
+                    </div>
+                    <label for="transform-title">Formulação / título do novo elemento</label>
+                    <input id="transform-title" maxlength="240" required placeholder="Qual hipótese, decisão ou experimento emerge daqui?">
+                    <label for="transform-body">Desenvolvimento inicial (opcional)</label>
+                    <textarea id="transform-body" rows="3" maxlength="20000" placeholder="Contexto inicial, premissas ou passos do experimento…"></textarea>
+                    <label for="transform-reason">Justificativa do movimento</label>
+                    <input id="transform-reason" maxlength="2000" placeholder="Por que esta transformação se desdobra do percurso atual?">
+                    <div class="toolbar">
+                      <button class="primary" type="submit">Registrar transformação e abrir →</button>
+                    </div>
+                  </form>
+                </details>
+              </section>
+              <details class="workspace-git"><summary>Histórico Git do percurso (commits e diff)</summary><div id="reference-git"></div></details>
               <details class="workspace-history"><summary>Alterações e percurso</summary><div id="reference-history"></div></details>
               <section id="note-proposals" aria-label="Propostas para este texto"></section>
             </article>
