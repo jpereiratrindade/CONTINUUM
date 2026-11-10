@@ -83,7 +83,13 @@
       <div class="topbar"><strong>CONTINUUM</strong><span aria-hidden="true">/</span><span id="current-view">Continuar</span></div>
       <div class="main-inner">
         <section class="view" id="view-explorar" aria-labelledby="explore-title">
-          <div class="workbench-heading"><h1 id="explore-title">O que vamos continuar?</h1><button id="new-idea" class="subtle" type="button">Nova ideia</button></div>
+          <div class="workbench-heading">
+            <div class="workbench-topbar-left">
+              <h1 id="explore-title" class="sr-only">Espaço de investigação</h1>
+              <div id="focus-switcher" class="focus-switcher" aria-label="Alternar percurso em foco"></div>
+            </div>
+            <button id="new-idea" class="subtle" type="button">+ Nova questão</button>
+          </div>
           <form id="search-form" class="question-box">
             <label for="query">Uma ideia, pergunta ou fragmento.</label>
             <textarea id="query" name="query" rows="2" maxlength="4000" required placeholder="Comece pelo que está pensando…"></textarea>
@@ -95,15 +101,19 @@
                 <div class="focus-eyebrow">🎯 Questão em foco</div>
                 <div class="focus-badges"><span id="reference-badge" class="chip"></span><span id="note-status" class="save-status" role="status"></span></div>
                 <h2 id="reference-title" class="focus-title"></h2>
-                <div class="note-origin small muted"><span id="note-origin"></span></div>
+                <details id="original-report-box" class="original-report-box hidden">
+                  <summary>Ver relato original e proveniência</summary>
+                  <p id="reference-original-report" class="small"></p>
+                  <div class="note-origin small muted"><span id="note-origin"></span></div>
+                </details>
               </div>
               <div class="focus-card">
                 <div class="focus-eyebrow">📋 Contexto</div>
                 <div id="reference-context-counts" class="context-counts small"></div>
                 <div class="workspace-actions toolbar">
-                  <button id="export-work" class="linklike" type="button">Exportar · MD</button>
-                  <button id="git-checkpoint" class="subtle" type="button">Versionar no Git</button>
-                  <button id="show-changes" class="linklike" type="button">Ver alterações</button>
+                  <button id="git-checkpoint" class="subtle" type="button">Versionar Git</button>
+                  <button id="export-work" class="linklike" type="button">Exportar MD</button>
+                  <button id="show-changes" class="linklike" type="button">Alterações</button>
                 </div>
                 <div id="git-status" class="small muted"></div>
                 <details class="revise-status-box">
@@ -123,29 +133,37 @@
                     <button class="subtle" type="submit">Preservar estado</button>
                   </form>
                 </details>
-              </div>
-              <div class="focus-card">
-                <div class="focus-eyebrow">🔀 Alternar percurso</div>
-                <div id="focus-switcher" class="focus-switcher"></div>
+                <div id="reference-transformations" class="focus-linked-nodes"></div>
               </div>
             </aside>
             <article class="writing-paper">
               <div class="workbench-column-header">
-                <h3>✎ Espaço de trabalho &amp; Síntese de transformação</h3>
-                <button id="show-proposals" class="linklike hidden"></button>
+                <div class="workspace-title-group">
+                  <h3>✎ Espaço de trabalho</h3>
+                  <div class="workspace-mode-tabs" role="tablist" aria-label="Modo do espaço de trabalho">
+                    <button type="button" id="tab-synthesis" class="mode-tab active" data-ws-mode="synthesis">Síntese viva</button>
+                    <button type="button" id="tab-editor" class="mode-tab" data-ws-mode="editor">Caderno Markdown</button>
+                  </div>
+                </div>
+                <div class="workspace-header-actions">
+                  <button id="show-proposals" class="linklike hidden"></button>
+                </div>
               </div>
-              <label for="working-text" class="sr-only">Texto em desenvolvimento</label>
-              <textarea id="working-text" maxlength="20000" placeholder="Continue aqui. Hipótese inicial, revisão, nova formulação ou caminho a experimentar…"></textarea>
+              <div id="workspace-synthesis-pane" class="workspace-synthesis-pane">
+                <div id="reference-critical-chains" class="critical-chains"></div>
+              </div>
+              <div id="workspace-editor-pane" class="workspace-editor-pane hidden">
+                <label for="working-text" class="sr-only">Texto em desenvolvimento</label>
+                <textarea id="working-text" maxlength="20000" placeholder="Continue aqui. Hipótese inicial, revisão, nova formulação ou caminho a experimentar…"></textarea>
+              </div>
               <div id="note-conflict" class="notice hidden" role="alert">
                 <p>Este espaço mudou em outro ambiente. Seu texto local está preservado.</p>
                 <details><summary>Ver texto compartilhado</summary><pre id="remote-note"></pre></details>
                 <div class="toolbar"><button id="resolve-note" class="subtle" type="button">Salvar meu texto como nova versão</button><button id="use-remote-note" class="subtle" type="button">Usar versão compartilhada</button></div>
               </div>
-              <section class="workspace-transformations" aria-label="Reconstrução crítica e desdobramentos">
-                <div id="reference-critical-chains" class="critical-chains"></div>
-                <div id="reference-transformations"></div>
+              <section class="workspace-transformations" aria-label="Ações de reconstrução e desdobramento">
                 <div id="objection-alert" class="notice hidden" role="alert"></div>
-                <div class="toolbar">
+                <div class="toolbar workspace-drawers-bar">
                   <details class="transform-action-box">
                     <summary class="subtle">+ Importar diálogo autorizado</summary>
                     <form id="dialogue-form" class="stack transform-form">
@@ -201,10 +219,10 @@
                       </div>
                     </form>
                   </details>
+                  <details class="workspace-git"><summary class="linklike">Histórico Git</summary><div id="reference-git"></div></details>
+                  <details class="workspace-history"><summary class="linklike">Trilha de edições</summary><div id="reference-history"></div></details>
                 </div>
               </section>
-              <details class="workspace-git"><summary>Histórico Git do percurso (commits e diff)</summary><div id="reference-git"></div></details>
-              <details class="workspace-history"><summary>Alterações e percurso</summary><div id="reference-history"></div></details>
               <section id="note-proposals" aria-label="Propostas para este texto"></section>
             </article>
             <aside class="context-panel" aria-label="Contribuições do CONTINUUM">
@@ -218,9 +236,10 @@
             <section class="transformation-strip" aria-label="Trajetória da transformação">
               <div class="strip-header">
                 <h3>⇄ Trajetória da transformação</h3>
-                <span class="small muted">(transformações, não apenas estados)</span>
+                <span class="small muted">(transformações, não apenas estados — clique em uma etapa para inspecionar o movimento)</span>
               </div>
               <div id="reference-ribbon" class="transformation-ribbon"></div>
+              <div id="ribbon-inspector" class="ribbon-inspector hidden" aria-live="polite"></div>
             </section>
           </div>
           <div class="home-section" id="resume"><h2>Em andamento</h2><p class="muted">Recuperando seus percursos…</p></div>

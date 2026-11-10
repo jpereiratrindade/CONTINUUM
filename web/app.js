@@ -153,11 +153,42 @@ function spanLabel(refs, brief=false) {
   if(brief)return `turno ${r.turn_id}`;
   return `turno ${r.turn_id}[${r.span_start}:${r.span_end}] · hash ${(r.source_version_hash||"").slice(0,10)}`;
 }
+function shortNodeLabel(node) {
+  const t = String(node.title || "");
+  const low = t.toLowerCase();
+  if (low.includes("sister-nexo") && low.includes("abstra")) return "Sister-Nexo & Abstração";
+  if (low.includes("vislumbre de converg") || low.includes("espaço de conexão")) return "Espaço de Convergência";
+  if (low.includes("cont-exp-003")) return "CONT-EXP-003 · MCP";
+  return clipText(t, 44);
+}
+function highlightTransformText(raw) {
+  let s = escapeHtml(String(raw ?? "").replace(/->/g, "→"));
+  const phrases = [
+    "reconstruir e investigar as transformações intelectuais",
+    "reconstruir as transformações intelectuais",
+    "investigar as transformações",
+    "proposta → objeção → reformulação",
+    "commit é ferramenta e não fim",
+  ];
+  for (const p of phrases) {
+    const esc = escapeHtml(p);
+    if (s.includes(esc)) s = s.replace(esc, `<mark class="ws-highlight">${esc}</mark>`);
+  }
+  return s;
+}
+function setWorkspaceMode(mode) {
+  const isEditor = mode === "editor";
+  $("#workspace-synthesis-pane")?.classList.toggle("hidden", isEditor);
+  $("#workspace-editor-pane")?.classList.toggle("hidden", !isEditor);
+  $("#tab-synthesis")?.classList.toggle("active", !isEditor);
+  $("#tab-editor")?.classList.toggle("active", isEditor);
+  if (active) active.wsMode = mode;
+}
 function renderChainCard(ch, idx) {
   const relLabel = MOVE_RELATION_LABEL[ch.what_was_objected.relation] || "Objeção";
   return `<div class="critical-chain">
     <div class="chain-header">
-      <strong>Transformação #${idx+1}</strong>
+      <strong>Ciclo de transformação #${idx+1}</strong>
       <span class="chip" title="Escopo: ${escapeHtml(ch.scope)}">Reconstrução candidata</span>
     </div>
     <div class="chain-row">
@@ -170,64 +201,129 @@ function renderChainCard(ch, idx) {
     </div>
     ${ch.what_changed_after?`<div class="chain-row reformulation">
       <span class="chain-step-label">3. Reformulação subsequente</span>
-      <div>${escapeHtml(ch.what_changed_after.content)}</div>
+      <div>${highlightTransformText(ch.what_changed_after.content)}</div>
     </div>`:`<div class="chain-row"><span class="chain-step-label">3. Reformulação subsequente</span><div class="muted">Ainda sem nova formulação vinculada.</div></div>`}
     <div class="chain-row doubt">
       <span class="chain-step-label">4. Questão em aberto</span>
       <div>${escapeHtml(ch.remaining_doubt)}</div>
     </div>
-    <details class="chain-drawer">
-      <summary>Lastro nos turnos, leitura alternativa e avaliação</summary>
-      <div class="chain-drawer-body">
-        <div><strong>Âncora da proposta:</strong> ${escapeHtml(spanLabel(ch.questioned_proposal.evidence_refs))}</div>
-        <div><strong>Âncora da objeção:</strong> ${escapeHtml(spanLabel(ch.what_was_objected.evidence_refs))}</div>
-        ${ch.what_changed_after?`<div><strong>Âncora da reformulação:</strong> ${escapeHtml(spanLabel(ch.what_changed_after.evidence_refs))}</div>`:""}
-        <div><em>Leitura alternativa:</em> ${escapeHtml(ch.what_was_objected.alternative_reading)}</div>
-        <div class="disposition-bar">
-          <span class="small muted">Avaliar esta objeção no escopo atual:</span>
-          <button class="subtle" type="button" data-dispose-target="${escapeHtml(ch.what_was_objected.id)}" data-dispose="useful">Útil</button>
-          <button class="subtle" type="button" data-dispose-target="${escapeHtml(ch.what_was_objected.id)}" data-dispose="not_relevant">Não pertinente</button>
-          <button class="subtle" type="button" data-dispose-target="${escapeHtml(ch.what_was_objected.id)}" data-dispose="incorrect_interpretation">Interpretação incorreta</button>
-          <button class="subtle" type="button" data-dispose-target="${escapeHtml(ch.what_was_objected.id)}" data-dispose="revisit_later">Revisitar depois</button>
-        </div>
+    <div class="chain-drawer-body">
+      <div><strong>Âncoras:</strong> proposta (${escapeHtml(spanLabel(ch.questioned_proposal.evidence_refs, true))}) · objeção (${escapeHtml(spanLabel(ch.what_was_objected.evidence_refs))})</div>
+      <div><em>Leitura alternativa:</em> ${escapeHtml(ch.what_was_objected.alternative_reading)}</div>
+      <div class="disposition-bar">
+        <span class="small muted">Avaliar objeção:</span>
+        <button class="subtle" type="button" data-dispose-target="${escapeHtml(ch.what_was_objected.id)}" data-dispose="useful">Útil</button>
+        <button class="subtle" type="button" data-dispose-target="${escapeHtml(ch.what_was_objected.id)}" data-dispose="not_relevant">Não pertinente</button>
+        <button class="subtle" type="button" data-dispose-target="${escapeHtml(ch.what_was_objected.id)}" data-dispose="incorrect_interpretation">Interpretação incorreta</button>
+        <button class="subtle" type="button" data-dispose-target="${escapeHtml(ch.what_was_objected.id)}" data-dispose="revisit_later">Revisitar depois</button>
       </div>
-    </details>
+    </div>
   </div>`;
 }
+const SLOT_ICON = {
+  candidate_convergence: "✓",
+  recurring_objection: "⚠",
+  tension_contradiction: "⇄",
+  next_movement: "→",
+};
 function renderCriticalTrajectory(data) {
   const crit=data.critical_trajectory;
   if(!crit)return;
   if($("#focus-switcher")&&allNodes.length){
-    $("#focus-switcher").innerHTML=allNodes.slice(0,8).map(n=>`<button type="button" class="focus-switch-btn${n.id===data.node.id?" active":""}" data-open-node="${escapeHtml(n.id)}"><span class="chip">${escapeHtml(KIND_LABEL[n.kind]||n.kind)}</span> <span>${escapeHtml(clipText(n.title, 78))}</span></button>`).join("");
+    $("#focus-switcher").innerHTML=`<span class="switcher-label">Percursos:</span>`+allNodes.slice(0,6).map(n=>`<button type="button" class="focus-switch-btn${n.id===data.node.id?" active":""}" data-open-node="${escapeHtml(n.id)}" title="${escapeHtml(n.title)}"><span class="chip">${escapeHtml(KIND_LABEL[n.kind]||n.kind)}</span> <span>${escapeHtml(shortNodeLabel(n))}</span></button>`).join("");
+  }
+  const fq = crit.focus_question;
+  if (fq && $("#reference-title")) {
+    $("#reference-title").textContent = fq.headline || data.node.title;
+    const origBox = $("#original-report-box");
+    if (origBox) {
+      origBox.classList.toggle("hidden", !fq.original_report);
+      if ($("#reference-original-report")) $("#reference-original-report").textContent = fq.original_report || "";
+    }
   }
   const key=JSON.stringify(crit)+allNodes.length;
   if(active.critKey===key)return;
   active.critKey=key;
   const counts=crit.context_counts||{};
   if($("#reference-context-counts")){
-    $("#reference-context-counts").innerHTML=`<div class="ctx-pill"><strong>${counts.documents||0}</strong><span>Documentos</span></div><div class="ctx-pill"><strong>${counts.dialogues||0}</strong><span>Discussões</span></div><div class="ctx-pill"><strong>${counts.commits||0}</strong><span>Versões Git</span></div><div class="ctx-pill" title="${counts.moves||0} movimentos reconstruídos"><strong>${counts.transformations||0}</strong><span>Transformações</span></div>`;
+    $("#reference-context-counts").innerHTML=`<div class="ctx-check"><span>✓ Documentos</span><strong>${counts.documents||0}</strong></div><div class="ctx-check"><span>✓ Discussões</span><strong>${counts.dialogues||0}</strong></div><div class="ctx-check"><span>✓ Commits / versões</span><strong>${counts.commits||0}</strong></div><div class="ctx-check" title="${counts.moves||0} movimentos reconstruídos"><span>✓ Transformações</span><strong>${counts.transformations||0}</strong></div>`;
   }
   const ribbon=crit.transformation_ribbon||[];
+  active.ribbonSteps = ribbon;
   if($("#reference-ribbon")){
-    $("#reference-ribbon").innerHTML=ribbon.length?ribbon.map((step,idx)=>`<div class="ribbon-step" data-kind="${escapeHtml(step.kind)}" title="${escapeHtml(spanLabel(step.evidence_refs))}"><strong>${idx+1}. ${escapeHtml(step.stage_label)}</strong><div>${escapeHtml(step.summary)}</div><div class="small muted">${escapeHtml(spanLabel(step.evidence_refs, true))}</div></div>`).join('<div class="ribbon-arrow" aria-hidden="true">→</div>'):'<p class="small muted">Importe um diálogo autorizado para reconstruir a cadeia de transformações (proposta → objeção → reformulação).</p>';
+    $("#reference-ribbon").innerHTML=ribbon.length?ribbon.map((step,idx)=>{
+      const isHighlight = step.kind === "reformulation" || step.concept_title === "Achado atual";
+      return `<button type="button" class="ribbon-step${isHighlight?" ribbon-highlight":""}" data-kind="${escapeHtml(step.kind)}" data-ribbon-idx="${idx}" title="Clique para inspecionar: ${escapeHtml(step.summary)}"><span class="ribbon-num">${idx+1}. ${escapeHtml(step.stage_label)}</span><strong>${escapeHtml(step.concept_title || step.stage_label)}</strong><small>${escapeHtml(spanLabel(step.evidence_refs, true))}</small></button>`;
+    }).join('<div class="ribbon-arrow" aria-hidden="true">→</div>'):'<p class="small muted">Importe um diálogo autorizado para reconstruir a trajetória de transformações (proposta → objeção → reformulação).</p>';
+    if ($("#ribbon-inspector")) $("#ribbon-inspector").classList.add("hidden");
   }
-  const chains=crit.chains||[];
+  const ws = crit.workspace_synthesis;
+  const chains = crit.chains || [];
+  if (!active.wsMode) {
+    setWorkspaceMode(ws ? "synthesis" : "editor");
+  }
   if($("#reference-critical-chains")){
-    if(!chains.length){
-      $("#reference-critical-chains").innerHTML="";
-    } else if(chains.length===1){
-      $("#reference-critical-chains").innerHTML=renderChainCard(chains[0], 0);
-    } else {
-      const latestIdx = chains.length - 1;
-      const olderCount = chains.length - 1;
-      const olderHtml = chains.slice(0, latestIdx).map((ch, idx) => renderChainCard(ch, idx)).join("");
-      $("#reference-critical-chains").innerHTML = renderChainCard(chains[latestIdx], latestIdx) + `<details class="older-chains"><summary>Ver ${olderCount === 1 ? "1 transformação anterior" : olderCount + " transformações anteriores"} deste percurso</summary><div class="older-chains-body">${olderHtml}</div></details>`;
+    if(!ws && !chains.length){
+      $("#reference-critical-chains").innerHTML=`<div class="empty-synthesis"><p class="muted">Este percurso ainda não possui diálogos importados para síntese de transformações.</p><button type="button" class="subtle" data-switch-ws="editor">✎ Escrever no caderno Markdown</button></div>`;
+    } else if (ws) {
+      const objId = ws.revision_objection?.id;
+      const chainsDrawer = chains.length ? `<details class="older-chains"><summary>Inspecionar ${chains.length === 1 ? "o ciclo detalhado de transformação" : `os ${chains.length} ciclos detalhados`} e âncoras de turno</summary><div class="older-chains-body">${chains.map((ch, idx) => renderChainCard(ch, idx)).join("")}</div></details>` : "";
+      $("#reference-critical-chains").innerHTML = `<div class="living-synthesis-card">
+        <ul class="synthesis-bullets">
+          <li class="syn-item syn-proposal">
+            <div class="syn-bullet-head"><strong>Hipótese inicial:</strong> <span class="syn-turn">${escapeHtml(spanLabel(ws.initial_hypothesis.evidence_refs, true))}</span></div>
+            <div class="syn-bullet-text">${escapeHtml(ws.initial_hypothesis.text)}</div>
+          </li>
+          <li class="syn-item syn-objection">
+            <div class="syn-bullet-head"><strong>Revisão / objeção:</strong> <span class="syn-turn">${escapeHtml(spanLabel(ws.revision_objection.evidence_refs, true))}</span></div>
+            <div class="syn-bullet-text">${highlightTransformText(ws.revision_objection.text)}</div>
+            ${objId ? `<details class="syn-inline-eval"><summary>Avaliar objeção ou ver leitura alternativa</summary><div class="syn-eval-box"><div class="small muted"><em>Leitura alternativa:</em> ${escapeHtml(ws.revision_objection.alternative_reading)} · <strong>Fonte:</strong> ${escapeHtml(spanLabel(ws.revision_objection.evidence_refs))}</div><div class="disposition-bar"><button class="subtle" type="button" data-dispose-target="${escapeHtml(objId)}" data-dispose="useful">Útil</button><button class="subtle" type="button" data-dispose-target="${escapeHtml(objId)}" data-dispose="not_relevant">Não pertinente</button><button class="subtle" type="button" data-dispose-target="${escapeHtml(objId)}" data-dispose="incorrect_interpretation">Interpretação incorreta</button><button class="subtle" type="button" data-dispose-target="${escapeHtml(objId)}" data-dispose="revisit_later">Revisitar depois</button></div></div></details>` : ""}
+          </li>
+          <li class="syn-item syn-reformulation">
+            <div class="syn-bullet-head"><strong>Nova formulação:</strong> <span class="syn-turn">${escapeHtml(spanLabel(ws.new_formulation.evidence_refs, true))}</span></div>
+            <div class="syn-bullet-text">${highlightTransformText(ws.new_formulation.text)}</div>
+          </li>
+          <li class="syn-item syn-question">
+            <div class="syn-bullet-head"><strong>Questão em aberto:</strong> <span class="syn-turn">${escapeHtml(spanLabel(ws.open_question.evidence_refs, true))}</span></div>
+            <div class="syn-bullet-text">${escapeHtml(ws.open_question.text)}</div>
+          </li>
+        </ul>
+        <div class="synthesis-footer">
+          ${chainsDrawer}
+          <button type="button" class="linklike" data-switch-ws="editor">✎ Editar ou acrescentar notas no Caderno Markdown →</button>
+        </div>
+      </div>`;
     }
   }
   const contrib=crit.continuum_contributions||{};
   const slots=[contrib.candidate_convergence,contrib.recurring_objection,contrib.tension_contradiction,contrib.next_movement].filter(Boolean);
   if($("#reference-continuum-cards")){
-    $("#reference-continuum-cards").innerHTML=slots.length?slots.map(s=>`<div class="epistemic-card" data-slot="${escapeHtml(s.kind)}"><div class="epistemic-card-head"><h4>${escapeHtml(s.label)}</h4><span class="chip">${escapeHtml(STATE_LABEL[s.state]||s.state)}</span></div><div class="epistemic-card-body">${escapeHtml(s.summary)}</div>${(s.alternative_reading||(s.evidence_refs&&s.evidence_refs.length))?`<details class="card-drawer"><summary>Fonte e leitura alternativa</summary><div class="card-drawer-body">${s.evidence_refs?.length?`<div><strong>Fonte:</strong> ${escapeHtml(spanLabel(s.evidence_refs))}</div>`:""}${s.alternative_reading?`<div><em>Leitura alternativa:</em> ${escapeHtml(s.alternative_reading)}</div>`:""}</div></details>`:""}</div>`).join(""):"";
+    $("#reference-continuum-cards").innerHTML=slots.length?slots.map(s=>{
+      const icon = SLOT_ICON[s.kind] || "✦";
+      const headline = String(s.headline || s.summary || "").replace(/->/g, "→");
+      const fullSummary = String(s.summary || "").replace(/->/g, "→");
+      return `<div class="epistemic-card" data-slot="${escapeHtml(s.kind)}">
+        <div class="epistemic-card-row">
+          <span class="epistemic-icon" aria-hidden="true">${icon}</span>
+          <div class="epistemic-content">
+            <div class="epistemic-card-head">
+              <h4>${escapeHtml(s.label)}</h4>
+              <span class="chip">${escapeHtml(STATE_LABEL[s.state]||s.state)}</span>
+            </div>
+            <div class="epistemic-card-body">${escapeHtml(headline)}</div>
+            ${s.related_title ? `<div class="epistemic-cross-tag">⇄ Vínculo: ${escapeHtml(s.related_title)}</div>` : ""}
+            <details class="card-drawer">
+              <summary>Detalhe e fonte</summary>
+              <div class="card-drawer-body">
+                ${fullSummary !== headline ? `<div>${escapeHtml(fullSummary)}</div>` : ""}
+                ${s.evidence_refs?.length?`<div><strong>Fonte:</strong> ${escapeHtml(spanLabel(s.evidence_refs))}</div>`:""}
+                ${s.alternative_reading?`<div><em>Leitura alternativa:</em> ${escapeHtml(s.alternative_reading)}</div>`:""}
+              </div>
+            </details>
+          </div>
+        </div>
+      </div>`;
+    }).join(""):"";
   }
   if($("#docs-approx-details")&&slots.length===0){
     $("#docs-approx-details").open=true;
@@ -240,12 +336,12 @@ function renderTransformations(data) {
   active.transformKey=key;
   $("#reference-badge").textContent=`${KIND_LABEL[data.node.kind]||data.node.kind} · ${STATUS_LABEL[data.node.status]||data.node.status}`;
   if($("#revise-status"))$("#revise-status").value=data.node.status;
-  $("#reference-transformations").innerHTML=items.length?items.map(t=>{
+  $("#reference-transformations").innerHTML=items.length?`<div class="linked-nodes-title">Percursos vinculados (${items.length})</div>`+items.map(t=>{
     const arrow=t.direction==="outgoing"?"→":"←";
     const rel=RELATION_LABEL[t.relation]||t.relation;
     const n=t.node;
-    return `<div class="transformation-item"><div class="transformation-meta"><span class="chip">${escapeHtml(KIND_LABEL[n.kind]||n.kind)} · ${escapeHtml(STATUS_LABEL[n.status]||n.status)}</span> <span class="small muted">${arrow} ${escapeHtml(rel)}</span><strong>${escapeHtml(n.title)}</strong><div class="small muted">${escapeHtml(t.reason)}</div></div><button class="subtle" type="button" data-open-node="${escapeHtml(n.id)}">Abrir →</button></div>`;
-  }).join(""):'<p class="small muted">Nenhuma transformação ou vínculo registrado ainda. Desdobre uma hipótese, ideia, decisão ou experimento abaixo para avançar o percurso.</p>';
+    return `<button class="linked-node-pill" type="button" data-open-node="${escapeHtml(n.id)}" title="${escapeHtml(n.title)} (${escapeHtml(t.reason)})"><span class="chip">${escapeHtml(KIND_LABEL[n.kind]||n.kind)}</span> <span>${arrow} ${escapeHtml(rel)}: <strong>${escapeHtml(shortNodeLabel(n))}</strong></span></button>`;
+  }).join(""):"";
 }
 async function renderGitHistory(id) {
   const g=await request(`/api/reference/git?id=${encodeURIComponent(id)}`);
@@ -285,7 +381,6 @@ async function pollReference() {
     session.revision=data.note.revision;session.text=data.note.text;
     if($("#working-text").value!==session.text)$("#working-text").value=session.text;
   }
-  $("#reference-title").textContent=data.node.title;
   renderReference(data);
 }
 async function ask(event) {
@@ -317,6 +412,19 @@ function onForm(selector,callback){$(selector).addEventListener("submit",async e
 async function actions(event){
  const target=event.target.closest("button");if(!target)return;
  if(target.dataset.openNode)return openNode(target.dataset.openNode);
+ if(target.dataset.wsMode){setWorkspaceMode(target.dataset.wsMode);if(target.dataset.wsMode==="editor")$("#working-text")?.focus();return;}
+ if(target.dataset.switchWs){setWorkspaceMode(target.dataset.switchWs);if(target.dataset.switchWs==="editor")$("#working-text")?.focus();return;}
+ if(target.dataset.ribbonIdx!==undefined&&active?.ribbonSteps){
+  const idx = Number(target.dataset.ribbonIdx);
+  const step = active.ribbonSteps[idx];
+  const insp = $("#ribbon-inspector");
+  if(step && insp){
+    $$(".ribbon-step").forEach((b,i)=>b.classList.toggle("selected",i===idx));
+    insp.classList.remove("hidden");
+    insp.innerHTML = `<div><strong>Etapa ${step.step} · ${escapeHtml(step.concept_title || step.stage_label)} (${escapeHtml(step.stage_label)}):</strong> ${highlightTransformText(step.full_content || step.summary)}</div><div class="small muted">Âncora verificável: ${escapeHtml(spanLabel(step.evidence_refs))}</div>`;
+  }
+  return;
+ }
  if(target.id==="export-work"&&active){await saveNote(active);if(active.dirty||active.conflict)throw Error("Conclua o salvamento para exportar o texto compartilhado.");location.href=`/api/reference/export?id=${encodeURIComponent(active.id)}`;return;}
  if(target.id==="git-checkpoint"&&active){
   target.disabled=true;

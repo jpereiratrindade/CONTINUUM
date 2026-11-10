@@ -1177,9 +1177,72 @@ def check_proposal_objections(lab: Lab, trajectory_id: str, proposal_text: str) 
     }
 
 
+def _distill_focus_question(title: str, body: str = "") -> dict[str, Any]:
+    """Produce a sharp, human-readable question headline when the original node title is a long narrative paragraph."""
+    raw_title = " ".join(str(title or "").split())
+    raw_body = " ".join(str(body or "").split())
+    full_text = raw_body if len(raw_body) >= len(raw_title) else raw_title
+    low = full_text.lower()
+    if len(raw_title) <= 92 and not raw_title.endswith("estamo"):
+        return {
+            "headline": raw_title,
+            "original_report": full_text if full_text != raw_title else "",
+            "is_distilled": False,
+        }
+    if "sister-nexo" in low and ("abstra" in low or "conex" in low):
+        headline = "Como transformar registros operacionais (Sister-Nexo) em conexões e abstração de trajetória?"
+    elif "vislumbre de converg" in low or "espaço de conexão ou converg" in low:
+        headline = "Como conceber um espaço que reconheça e ofereça autonomamente convergências intelectuais?"
+    elif "mcp" in low and "continuidade" in low:
+        headline = "Quais as fronteiras entre interoperabilidade MCP e continuidade intelectual?"
+    else:
+        headline = _clip(full_text, 92)
+    return {
+        "headline": headline,
+        "original_report": full_text,
+        "is_distilled": True,
+    }
+
+
+def _derive_ribbon_stage(m: dict[str, Any], idx: int, total: int) -> str:
+    """Derive a 2-4 word conceptual stage label for the horizontal 'Trajetória da transformação' strip."""
+    low = m["content"].lower()
+    kind = m["kind"]
+    if idx == 0:
+        if "abstra" in low or "sister-nexo" in low:
+            return "Problema da abstração"
+        if "converg" in low or "interface" in low:
+            return "Problema da convergência"
+        return "Problema da organização"
+    if kind == "reformulation":
+        return "Achado atual" if idx >= total - 3 else "Nova formulação"
+    if kind == "question":
+        return "Próximo movimento"
+    if kind == "proposal":
+        if "git" in low or "commit" in low or "tabela" in low or "pain" in low:
+            return "Foco em registros"
+        if "mcp" in low or "interoperabilidade" in low or "automa" in low:
+            return "Interoperabilidade"
+        if "rag" in low or "vetor" in low or "embedding" in low or "abstra" in low:
+            return "Desafio da abstração"
+        return "Proposta inicial"
+    if kind == "objection":
+        if "planilha" in low or "tabela" in low or ("commit" in low and "ferramenta" in low):
+            return "Reducionismo técnico"
+        if "outra plataforma" in low or "máquina de escrever" in low or "maquina de escrever" in low:
+            return "Desafio da automação"
+        if "estátic" in low or "estatic" in low or "história" in low or "historia" in low:
+            return "Limite estático"
+        return "Crítica / objeção"
+    if kind == "qualification":
+        return "Condição de lastro"
+    return "Movimento"
+
+
 def critical_trajectory(lab: Lab, trajectory_id: str) -> dict[str, Any]:
     """Section 6 & 7.4 Functional Criterion: Reconstruct proposal -> objection -> reformulation -> remaining doubt."""
     node = lab.node(trajectory_id)
+    focus_q = _distill_focus_question(node["title"], node.get("body", ""))
     # Only grounded moves participate in grounded synthesis (INV-T02)
     all_moves = list_moves(lab, trajectory_id)
     grounded_moves = [m for m in all_moves if m["status"] != "ungrounded_hypothesis" and m["evidence_refs"]]
@@ -1195,8 +1258,10 @@ def critical_trajectory(lab: Lab, trajectory_id: str) -> dict[str, Any]:
         return {
             "trajectory_id": trajectory_id,
             "question": node["title"],
+            "focus_question": focus_q,
             "status_notice": "sem evidência suficiente",
             "context_counts": {"dialogues": dlg_count, "moves": 0, "transformations": 0},
+            "workspace_synthesis": None,
             "continuum_contributions": {
                 "candidate_convergence": None,
                 "recurring_objection": None,
@@ -1398,17 +1463,22 @@ def critical_trajectory(lab: Lab, trajectory_id: str) -> dict[str, Any]:
             cross_terms = sh[:5]
 
     if cross_match:
+        conv_headline = _clip(conv_source["content"], 120)
         conv_summary = (
             f"Convergência entre este percurso e '{_clip(cross_match['title'], 95)}': "
             f"{_clip(conv_source['content'], 190)} (termos em comum: {', '.join(cross_terms)})."
         )
     else:
+        conv_headline = _clip(conv_source["content"], 120)
         conv_summary = _clip(conv_source["content"], 240)
 
     candidate_convergence = {
         "kind": "candidate_convergence",
         "label": "Convergência candidata",
+        "headline": conv_headline,
         "summary": conv_summary,
+        "related_title": _clip(cross_match["title"], 90) if cross_match else None,
+        "shared_terms": cross_terms,
         "move_id": conv_source["id"],
         "related_trajectory_id": cross_match["id"] if cross_match else None,
         "evidence_refs": conv_source["evidence_refs"],
@@ -1423,17 +1493,20 @@ def critical_trajectory(lab: Lab, trajectory_id: str) -> dict[str, Any]:
         if len(active_objections) >= 2:
             first_obj = active_objections[0]
             obj_label = f"Objeção recorrente ({len(active_objections)} ocorrências)"
+            obj_headline = _clip(first_obj["content"], 115)
             obj_summary = (
                 f"Padrão crítico recorrente: (1) {_clip(first_obj['content'], 115)} · "
                 f"(2) {_clip(top_obj['content'], 115)}"
             )
         else:
             obj_label = "Objeção ativa no escopo"
+            obj_headline = _clip(top_obj["content"], 115)
             obj_summary = _clip(top_obj["content"], 240)
 
         recurring_objection = {
             "kind": "recurring_objection",
             "label": obj_label,
+            "headline": obj_headline,
             "summary": obj_summary,
             "contested_proposal": _clip(top_obj["contested_proposal_content"], 180),
             "move_id": top_obj["id"],
@@ -1446,11 +1519,13 @@ def critical_trajectory(lab: Lab, trajectory_id: str) -> dict[str, Any]:
     if tension_candidates:
         t_src = tension_candidates[-1]
         used_move_ids.add(t_src["id"])
+        t_headline = _clip(t_src["content"], 115)
         t_summary = _clip(t_src["content"], 240)
         t_refs = t_src["evidence_refs"]
         t_id = t_src["id"]
     elif chains:
         last_ch = chains[-1]
+        t_headline = _clip(last_ch["what_was_objected"]["content"], 115)
         t_summary = (
             f"Tensão entre a proposta ('{_clip(last_ch['questioned_proposal']['content'], 95)}') "
             f"e a crítica registrada ('{_clip(last_ch['what_was_objected']['content'], 95)}')."
@@ -1458,6 +1533,7 @@ def critical_trajectory(lab: Lab, trajectory_id: str) -> dict[str, Any]:
         t_refs = last_ch["what_was_objected"]["evidence_refs"]
         t_id = last_ch["what_was_objected"]["id"]
     else:
+        t_headline = _clip(default_remaining_doubt, 115)
         t_summary = _clip(default_remaining_doubt, 240)
         t_refs = []
         t_id = None
@@ -1465,6 +1541,7 @@ def critical_trajectory(lab: Lab, trajectory_id: str) -> dict[str, Any]:
     tension_contradiction = {
         "kind": "tension_contradiction",
         "label": "Tensão / condição",
+        "headline": t_headline,
         "summary": t_summary,
         "move_id": t_id,
         "evidence_refs": t_refs,
@@ -1474,9 +1551,39 @@ def critical_trajectory(lab: Lab, trajectory_id: str) -> dict[str, Any]:
     next_movement_slot = {
         "kind": "next_movement",
         "label": "Próximo movimento",
+        "headline": _clip(default_remaining_doubt, 125),
         "summary": _clip(default_remaining_doubt, 240),
         "basis_move_id": open_questions[-1]["id"] if open_questions else conv_source["id"],
         "state": "candidate",
+    }
+
+    # Build living editorial synthesis for the center "Espaço de trabalho" panel
+    first_prop = proposals_all[0] if proposals_all else (chains[0]["questioned_proposal"] if chains else grounded_moves[0])
+    primary_obj = active_objections[-1] if active_objections else None
+    primary_ref = reforms_all[-1] if reforms_all else None
+    workspace_synthesis = {
+        "initial_hypothesis": {
+            "label": "Hipótese inicial",
+            "text": first_prop["content"],
+            "evidence_refs": first_prop.get("evidence_refs", []),
+        },
+        "revision_objection": {
+            "label": "Revisão / objeção crítica",
+            "id": primary_obj["id"] if primary_obj else None,
+            "text": primary_obj["content"] if primary_obj else "Nenhuma objeção crítica registrada ainda neste percurso.",
+            "alternative_reading": primary_obj.get("alternative_reading", "") if primary_obj else "",
+            "evidence_refs": primary_obj.get("evidence_refs", []) if primary_obj else [],
+        },
+        "new_formulation": {
+            "label": "Nova formulação",
+            "text": primary_ref["content"] if primary_ref else conv_source["content"],
+            "evidence_refs": primary_ref.get("evidence_refs", []) if primary_ref else conv_source.get("evidence_refs", []),
+        },
+        "open_question": {
+            "label": "Questão em aberto",
+            "text": default_remaining_doubt,
+            "evidence_refs": open_questions[-1]["evidence_refs"] if open_questions else [],
+        },
     }
 
     # Build horizontal "Trajetória da transformação" ribbon (transformações, não apenas estados)
@@ -1491,13 +1598,16 @@ def critical_trajectory(lab: Lab, trajectory_id: str) -> dict[str, Any]:
         "suspension": "Suspensão",
     }
     transformation_ribbon = []
+    total_moves = len(grounded_moves)
     for idx, m in enumerate(grounded_moves):
         transformation_ribbon.append({
             "step": idx + 1,
             "move_id": m["id"],
             "kind": m["kind"],
+            "concept_title": _derive_ribbon_stage(m, idx, total_moves),
             "stage_label": stage_labels.get(m["kind"], m["kind"]),
             "summary": _clip(m["content"], 135),
+            "full_content": m["content"],
             "evidence_refs": m["evidence_refs"],
             "status": m["status"],
         })
@@ -1505,12 +1615,14 @@ def critical_trajectory(lab: Lab, trajectory_id: str) -> dict[str, Any]:
     return {
         "trajectory_id": trajectory_id,
         "question": node["title"],
+        "focus_question": focus_q,
         "status_notice": "reconstrução candidata disponível" if chains else "movimentos extraídos sem cadeia completa de objeção",
         "context_counts": {
             "dialogues": dlg_count,
             "moves": len(grounded_moves),
             "transformations": len(transforms),
         },
+        "workspace_synthesis": workspace_synthesis,
         "continuum_contributions": {
             "candidate_convergence": candidate_convergence,
             "recurring_objection": recurring_objection,
