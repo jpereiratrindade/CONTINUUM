@@ -230,6 +230,8 @@ def reference(lab, ident):
             from .transformations import critical_trajectory
             crit = critical_trajectory(lab, ident)
             crit['context_counts']['documents'] = len(package['evidence']) if package else 0
+            gh = git_history(lab, ident)
+            crit['context_counts']['commits'] = len(gh.get('commits', []))
             return {'node': node, 'note': working, 'package': package, 'package_event_id': row['event_id'] if row else None,
                     'authorship': authorship(lab, ident), 'proposals': list_proposals(lab, ident),
                     'transformations': transformations(lab, ident),

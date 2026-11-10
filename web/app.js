@@ -145,16 +145,19 @@ function spanLabel(refs) {
 function renderCriticalTrajectory(data) {
   const crit=data.critical_trajectory;
   if(!crit)return;
-  const key=JSON.stringify(crit);
+  if($("#focus-switcher")&&allNodes.length){
+    $("#focus-switcher").innerHTML=allNodes.slice(0,8).map(n=>`<button type="button" class="focus-switch-btn${n.id===data.node.id?" active":""}" data-open-node="${escapeHtml(n.id)}"><span class="chip">${escapeHtml(KIND_LABEL[n.kind]||n.kind)}</span> ${escapeHtml(n.title.slice(0,95))}${n.title.length>95?"…":""}</button>`).join("");
+  }
+  const key=JSON.stringify(crit)+allNodes.length;
   if(active.critKey===key)return;
   active.critKey=key;
   const counts=crit.context_counts||{};
   if($("#reference-context-counts")){
-    $("#reference-context-counts").innerHTML=`<span>✓ Documentos (${counts.documents||0})</span><span>✓ Discussões (${counts.dialogues||0})</span><span>✓ Movimentos (${counts.moves||0}) · Transformações (${counts.transformations||0})</span>`;
+    $("#reference-context-counts").innerHTML=`<div>✓ Documentos (${counts.documents||0})</div><div>✓ Discussões (${counts.dialogues||0})</div><div>✓ Commits / versões (${counts.commits||0})</div><div>✓ Movimentos (${counts.moves||0}) · Transformações (${counts.transformations||0})</div>`;
   }
   const ribbon=crit.transformation_ribbon||[];
   if($("#reference-ribbon")){
-    $("#reference-ribbon").innerHTML=ribbon.length?ribbon.map((step,idx)=>`<div class="ribbon-step" data-kind="${escapeHtml(step.kind)}"><strong>${idx+1}. ${escapeHtml(step.stage_label)}</strong><div>${escapeHtml(step.summary)}</div><div class="small muted">${escapeHtml(spanLabel(step.evidence_refs))}</div></div>`).join(""):'<p class="small muted">Importe um diálogo autorizado abaixo para reconstruir a cadeia de transformações (proposta → objeção → reformulação).</p>';
+    $("#reference-ribbon").innerHTML=ribbon.length?ribbon.map((step,idx)=>`<div class="ribbon-step" data-kind="${escapeHtml(step.kind)}"><strong>${idx+1}. ${escapeHtml(step.stage_label)}</strong><div>${escapeHtml(step.summary)}</div><div class="small muted">${escapeHtml(spanLabel(step.evidence_refs))}</div></div>`).join('<div class="ribbon-arrow" aria-hidden="true">→</div>'):'<p class="small muted">Importe um diálogo autorizado para reconstruir a cadeia de transformações (proposta → objeção → reformulação).</p>';
   }
   const chains=crit.chains||[];
   if($("#reference-critical-chains")){

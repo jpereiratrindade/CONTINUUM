@@ -90,117 +90,138 @@
             <div class="question-actions"><span id="question-status" role="status">Seu rascunho fica neste navegador.</span><button class="primary" type="submit">Começar <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-arrow"/></svg></button></div>
           </form>
           <div id="reference-workspace" class="reference-layout hidden">
+            <aside class="focus-panel" aria-label="Questão em foco e contexto">
+              <div class="focus-card">
+                <div class="focus-eyebrow">🎯 Questão em foco</div>
+                <div class="focus-badges"><span id="reference-badge" class="chip"></span><span id="note-status" class="save-status" role="status"></span></div>
+                <h2 id="reference-title" class="focus-title"></h2>
+                <div class="note-origin small muted"><span id="note-origin"></span></div>
+              </div>
+              <div class="focus-card">
+                <div class="focus-eyebrow">📋 Contexto</div>
+                <div id="reference-context-counts" class="context-counts small"></div>
+                <div class="workspace-actions toolbar">
+                  <button id="export-work" class="linklike" type="button">Exportar · MD</button>
+                  <button id="git-checkpoint" class="subtle" type="button">Versionar no Git</button>
+                  <button id="show-changes" class="linklike" type="button">Ver alterações</button>
+                </div>
+                <div id="git-status" class="small muted"></div>
+                <details class="revise-status-box">
+                  <summary class="linklike">Revisar estado do percurso</summary>
+                  <form id="revise-form" class="inline-transform-form">
+                    <label>Estado
+                      <select id="revise-status">
+                        <option value="open">Aberto (open)</option>
+                        <option value="active">Em andamento (active)</option>
+                        <option value="suspended">Suspenso (suspended)</option>
+                        <option value="resolved">Resolvido (resolved)</option>
+                      </select>
+                    </label>
+                    <label class="grow">Justificativa da revisão
+                      <input id="revise-reason" required maxlength="2000" placeholder="Por que o estado mudou?">
+                    </label>
+                    <button class="subtle" type="submit">Preservar estado</button>
+                  </form>
+                </details>
+              </div>
+              <div class="focus-card">
+                <div class="focus-eyebrow">🔀 Alternar percurso</div>
+                <div id="focus-switcher" class="focus-switcher"></div>
+              </div>
+            </aside>
             <article class="writing-paper">
-              <div class="reference-heading"><span id="reference-badge" class="chip"></span><h2 id="reference-title"></h2><span id="note-status" class="save-status" role="status"></span></div>
-              <div id="reference-context-counts" class="context-counts small muted"></div>
-              <div class="note-origin small muted"><span id="note-origin"></span> <button id="show-changes" class="linklike">Ver alterações</button> <button id="show-proposals" class="linklike hidden"></button></div>
+              <div class="workbench-column-header">
+                <h3>✎ Espaço de trabalho &amp; Síntese de transformação</h3>
+                <button id="show-proposals" class="linklike hidden"></button>
+              </div>
               <label for="working-text" class="sr-only">Texto em desenvolvimento</label>
-              <textarea id="working-text" maxlength="20000" placeholder="Continue aqui. Uma associação, um esboço, um caminho a experimentar…"></textarea>
+              <textarea id="working-text" maxlength="20000" placeholder="Continue aqui. Hipótese inicial, revisão, nova formulação ou caminho a experimentar…"></textarea>
               <div id="note-conflict" class="notice hidden" role="alert">
                 <p>Este espaço mudou em outro ambiente. Seu texto local está preservado.</p>
                 <details><summary>Ver texto compartilhado</summary><pre id="remote-note"></pre></details>
                 <div class="toolbar"><button id="resolve-note" class="subtle" type="button">Salvar meu texto como nova versão</button><button id="use-remote-note" class="subtle" type="button">Usar versão compartilhada</button></div>
               </div>
-              <div class="workspace-actions toolbar">
-                <button id="export-work" class="linklike" type="button">Exportar texto · MD</button>
-                <button id="git-checkpoint" class="subtle" type="button">Versionar no Git</button>
-                <span id="git-status" class="small muted"></span>
-              </div>
-              <section class="workspace-transformations" aria-label="Trajetória da transformação">
-                <div class="transformations-header">
-                  <div>
-                    <h3>Trajetória da transformação <small class="muted">(transformações, não apenas estados)</small></h3>
-                  </div>
-                  <details class="revise-status-box">
-                    <summary class="linklike">Revisar estado</summary>
-                    <form id="revise-form" class="inline-transform-form">
-                      <label>Estado
-                        <select id="revise-status">
-                          <option value="open">Aberto (open)</option>
-                          <option value="active">Em andamento (active)</option>
-                          <option value="suspended">Suspenso (suspended)</option>
-                          <option value="resolved">Resolvido (resolved)</option>
-                        </select>
-                      </label>
-                      <label class="grow">Justificativa da revisão
-                        <input id="revise-reason" required maxlength="2000" placeholder="Por que o estado deste percurso mudou?">
-                      </label>
-                      <button class="subtle" type="submit">Preservar estado</button>
-                    </form>
-                  </details>
-                </div>
-                <div id="reference-ribbon" class="transformation-ribbon"></div>
+              <section class="workspace-transformations" aria-label="Reconstrução crítica e desdobramentos">
                 <div id="reference-critical-chains" class="critical-chains"></div>
                 <div id="reference-transformations"></div>
                 <div id="objection-alert" class="notice hidden" role="alert"></div>
-                <details class="transform-action-box">
-                  <summary class="subtle">+ Importar diálogo autorizado (reconstruir proposta → objeção → reformulação)</summary>
-                  <form id="dialogue-form" class="stack transform-form">
-                    <div class="link-form">
-                      <label>Identificador da conversa
-                        <input id="dialogue-conv-id" required maxlength="200" placeholder="ex.: sessao-2026-11-10-continuum">
-                      </label>
-                      <label>Escopo autorizado (INV-T11)
-                        <input id="dialogue-scope" required maxlength="200" value="authorized:continuum-research">
-                      </label>
-                    </div>
-                    <label for="dialogue-title">Título / contexto do diálogo (opcional)</label>
-                    <input id="dialogue-title" maxlength="240" placeholder="Discussão sobre continuidade intelectual e objeções…">
-                    <label for="dialogue-text">Transcrição do diálogo (prefixe turnos com "Usuário:" e "Assistente:" ou separe por parágrafos)</label>
-                    <textarea id="dialogue-text" rows="5" maxlength="60000" required placeholder="Usuário: Criamos uma interface para listar commits e tabelas.&#10;Assistente: Podemos expor isso via MCP.&#10;Usuário: Mas como está é como ler um texto em outra plataforma; commit é ferramenta e não fim.&#10;Assistente: Então precisamos reformular: deixar de apenas recuperar registros e reconstruir as transformações intelectuais e objeções."></textarea>
-                    <div class="toolbar">
-                      <button class="primary" type="submit">Importar diálogo e reconstruir transformações</button>
-                    </div>
-                  </form>
-                </details>
-                <details class="transform-action-box">
-                  <summary class="subtle">+ Desdobrar em hipótese, ideia, decisão ou experimento</summary>
-                  <form id="transform-form" class="stack transform-form">
-                    <div class="link-form">
-                      <label>Transformar em
-                        <select id="transform-kind">
-                          <option value="hypothesis">Hipótese</option>
-                          <option value="idea">Ideia</option>
-                          <option value="decision">Decisão declarada</option>
-                          <option value="experiment">Experimento</option>
-                          <option value="opportunity">Oportunidade candidata</option>
-                          <option value="question">Questão derivada</option>
-                        </select>
-                      </label>
-                      <label>Relação com o percurso atual
-                        <select id="transform-relation">
-                          <option value="evolves_into">Evolui para (evolves_into)</option>
-                          <option value="supports">Pode sustentar (supports)</option>
-                          <option value="contradicts">Contradiz / tensiona (contradicts)</option>
-                          <option value="depends_on">Depende de (depends_on)</option>
-                          <option value="relates_to">Relaciona-se a (relates_to)</option>
-                        </select>
-                      </label>
-                    </div>
-                    <label for="transform-title">Formulação / título do novo elemento</label>
-                    <input id="transform-title" maxlength="240" required placeholder="Qual hipótese, decisão ou experimento emerge daqui?">
-                    <label for="transform-body">Desenvolvimento inicial (opcional)</label>
-                    <textarea id="transform-body" rows="3" maxlength="20000" placeholder="Contexto inicial, premissas ou passos do experimento…"></textarea>
-                    <label for="transform-reason">Justificativa do movimento</label>
-                    <input id="transform-reason" maxlength="2000" placeholder="Por que esta transformação se desdobra do percurso atual?">
-                    <div class="toolbar">
-                      <button class="primary" type="submit">Registrar transformação e abrir →</button>
-                    </div>
-                  </form>
-                </details>
+                <div class="toolbar">
+                  <details class="transform-action-box">
+                    <summary class="subtle">+ Importar diálogo autorizado</summary>
+                    <form id="dialogue-form" class="stack transform-form">
+                      <div class="link-form">
+                        <label>Identificador da conversa
+                          <input id="dialogue-conv-id" required maxlength="200" placeholder="ex.: sessao-2026-11-10-continuum">
+                        </label>
+                        <label>Escopo autorizado (INV-T11)
+                          <input id="dialogue-scope" required maxlength="200" value="authorized:continuum-research">
+                        </label>
+                      </div>
+                      <label for="dialogue-title">Título / contexto do diálogo (opcional)</label>
+                      <input id="dialogue-title" maxlength="240" placeholder="Discussão sobre continuidade intelectual e objeções…">
+                      <label for="dialogue-text">Transcrição do diálogo (prefixe turnos com "Usuário:" e "Assistente:" ou separe por parágrafos)</label>
+                      <textarea id="dialogue-text" rows="5" maxlength="60000" required placeholder="Usuário: Criamos uma interface para listar commits e tabelas.&#10;Assistente: Podemos expor isso via MCP.&#10;Usuário: Mas como está é como ler um texto em outra plataforma; commit é ferramenta e não fim.&#10;Assistente: Então precisamos reformular: deixar de apenas recuperar registros e reconstruir as transformações intelectuais e objeções."></textarea>
+                      <div class="toolbar">
+                        <button class="primary" type="submit">Importar diálogo e reconstruir transformações</button>
+                      </div>
+                    </form>
+                  </details>
+                  <details class="transform-action-box">
+                    <summary class="subtle">+ Desdobrar em hipótese, ideia, decisão ou experimento</summary>
+                    <form id="transform-form" class="stack transform-form">
+                      <div class="link-form">
+                        <label>Transformar em
+                          <select id="transform-kind">
+                            <option value="hypothesis">Hipótese</option>
+                            <option value="idea">Ideia</option>
+                            <option value="decision">Decisão declarada</option>
+                            <option value="experiment">Experimento</option>
+                            <option value="opportunity">Oportunidade candidata</option>
+                            <option value="question">Questão derivada</option>
+                          </select>
+                        </label>
+                        <label>Relação com o percurso atual
+                          <select id="transform-relation">
+                            <option value="evolves_into">Evolui para (evolves_into)</option>
+                            <option value="supports">Pode sustentar (supports)</option>
+                            <option value="contradicts">Contradiz / tensiona (contradicts)</option>
+                            <option value="depends_on">Depende de (depends_on)</option>
+                            <option value="relates_to">Relaciona-se a (relates_to)</option>
+                          </select>
+                        </label>
+                      </div>
+                      <label for="transform-title">Formulação / título do novo elemento</label>
+                      <input id="transform-title" maxlength="240" required placeholder="Qual hipótese, decisão ou experimento emerge daqui?">
+                      <label for="transform-body">Desenvolvimento inicial (opcional)</label>
+                      <textarea id="transform-body" rows="3" maxlength="20000" placeholder="Contexto inicial, premissas ou passos do experimento…"></textarea>
+                      <label for="transform-reason">Justificativa do movimento</label>
+                      <input id="transform-reason" maxlength="2000" placeholder="Por que esta transformação se desdobra do percurso atual?">
+                      <div class="toolbar">
+                        <button class="primary" type="submit">Registrar transformação e abrir →</button>
+                      </div>
+                    </form>
+                  </details>
+                </div>
               </section>
               <details class="workspace-git"><summary>Histórico Git do percurso (commits e diff)</summary><div id="reference-git"></div></details>
               <details class="workspace-history"><summary>Alterações e percurso</summary><div id="reference-history"></div></details>
               <section id="note-proposals" aria-label="Propostas para este texto"></section>
             </article>
-            <aside class="context-panel" aria-label="Contexto para continuar">
-              <div class="context-heading"><h2>Contribuições do CONTINUUM</h2><span id="context-state" class="small muted"></span></div>
+            <aside class="context-panel" aria-label="Contribuições do CONTINUUM">
+              <div class="context-heading"><h2>✦ Contribuições do CONTINUUM</h2><span id="context-state" class="small muted"></span></div>
               <div id="reference-continuum-cards" class="continuum-cards"></div>
               <div id="reference-next"></div>
-              <div id="reference-contributions"></div>
+              <details class="context-details" open><summary>Fontes documentais aproximadas</summary><div id="reference-contributions"></div></details>
               <details class="context-details"><summary>Outras aproximações</summary><div id="reference-related"></div><div id="reference-connections"></div></details>
-              <details class="context-details"><summary>Como este contexto foi preparado</summary><p class="small muted">Referências aproximadas por termos em comum nas fontes autorizadas. Não são conclusões. Você escolhe o que incorporar.</p><div id="reference-provenance" class="small muted"></div></details>
+              <details class="context-details"><summary>Como este contexto foi preparado</summary><p class="small muted">Reconstrução candidata ancorada em turnos e fontes autorizadas. Não são conclusões definitivas.</p><div id="reference-provenance" class="small muted"></div></details>
             </aside>
+            <section class="transformation-strip" aria-label="Trajetória da transformação">
+              <div class="strip-header">
+                <h3>⇄ Trajetória da transformação</h3>
+                <span class="small muted">(transformações, não apenas estados)</span>
+              </div>
+              <div id="reference-ribbon" class="transformation-ribbon"></div>
+            </section>
           </div>
           <div class="home-section" id="resume"><h2>Em andamento</h2><p class="muted">Recuperando seus percursos…</p></div>
         </section>
