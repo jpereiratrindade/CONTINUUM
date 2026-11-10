@@ -6,6 +6,16 @@ const QUESTION_KEY = "continuum.question.v1";
 const KIND_LABEL = {question:"Questão",idea:"Ideia",hypothesis:"Hipótese",decision:"Decisão",experiment:"Experimento",opportunity:"Oportunidade"};
 const STATUS_LABEL = {open:"Aberto",active:"Em andamento",suspended:"Suspenso",resolved:"Resolvido"};
 const RELATION_LABEL = {evolves_into:"Evolui para",supports:"Pode sustentar",contradicts:"Contradiz / tensiona",depends_on:"Depende de",relates_to:"Relaciona-se a"};
+const STATE_LABEL = {candidate:"Candidata",endorsed:"Declarada",rectified:"Retificada"};
+const MOVE_RELATION_LABEL = {objects_to:"Contesta",challenges:"Tensiona",reformulates:"Reformula",constrains:"Condiciona",supports:"Sustenta",resolves:"Encaminha"};
+const DISPOSE_LABEL = {useful:"Útil",not_relevant:"Não pertinente",incorrect_interpretation:"Interpretação incorreta",revisit_later:"Revisitar depois"};
+function clipText(value, limit=95) {
+  const s = String(value ?? "").trim();
+  if (s.length <= limit) return s;
+  const cut = s.slice(0, limit);
+  const sp = cut.lastIndexOf(" ");
+  return (sp >= Math.floor(limit * 0.6) ? cut.slice(0, sp) : cut).replace(/[,;:\s]+$/, "") + "…";
+}
 let questionState = {draft: "", submitted: null};
 let allNodes = [], nextOffset = null, active = null, opening = 0, asking = false;
 function uuid() {
@@ -137,49 +147,90 @@ function renderProposals(data) {
   const reviewed=proposals.filter(p=>p.state!=="pending");
   $("#note-proposals").innerHTML=(pending.length?`<h3>${pending.length===1?"Uma proposta para examinar":pending.length+" propostas para examinar"}</h3>`:"")+pending.map(p=>`<details class="text-proposal"><summary title="${escapeHtml(p.source_ref)}">Proposta de ${escapeHtml(originLabel(p))}<small>Ainda não incorporada · ${escapeHtml(new Date(p.recorded_at).toLocaleString("pt-BR"))}</small></summary><p class="small muted">Se incorporar, este trecho será acrescentado ao final do texto preservado.</p><pre class="proposal-text">${escapeHtml(p.text)}</pre><div class="toolbar"><button class="subtle" data-accept-proposal="${escapeHtml(p.id)}" data-revision="${data.note.revision}">Incorporar ao final</button><button class="subtle" data-dismiss-proposal="${escapeHtml(p.id)}">Dispensar</button></div></details>`).join("")+(reviewed.length?`<details class="reviewed-proposals"><summary>Propostas examinadas (${reviewed.length})</summary>${reviewed.map(p=>`<details><summary>${p.state==="incorporated"?"Incorporada":"Dispensada"} · ${escapeHtml(originLabel(p))}</summary><pre class="proposal-text">${escapeHtml(p.text)}</pre></details>`).join("")}</details>`:"");
 }
-function spanLabel(refs) {
+function spanLabel(refs, brief=false) {
   if(!refs||!refs.length)return "sem trecho ancorado";
   const r=refs[0];
+  if(brief)return `turno ${r.turn_id}`;
   return `turno ${r.turn_id}[${r.span_start}:${r.span_end}] · hash ${(r.source_version_hash||"").slice(0,10)}`;
 }
-function renderCriticalTrajectory(data) {
-  const crit=data.critical_trajectory;
-  if(!crit)return;
-  if($("#focus-switcher")&&allNodes.length){
-    $("#focus-switcher").innerHTML=allNodes.slice(0,8).map(n=>`<button type="button" class="focus-switch-btn${n.id===data.node.id?" active":""}" data-open-node="${escapeHtml(n.id)}"><span class="chip">${escapeHtml(KIND_LABEL[n.kind]||n.kind)}</span> ${escapeHtml(n.title.slice(0,95))}${n.title.length>95?"…":""}</button>`).join("");
-  }
-  const key=JSON.stringify(crit)+allNodes.length;
-  if(active.critKey===key)return;
-  active.critKey=key;
-  const counts=crit.context_counts||{};
-  if($("#reference-context-counts")){
-    $("#reference-context-counts").innerHTML=`<div>✓ Documentos (${counts.documents||0})</div><div>✓ Discussões (${counts.dialogues||0})</div><div>✓ Commits / versões (${counts.commits||0})</div><div>✓ Movimentos (${counts.moves||0}) · Transformações (${counts.transformations||0})</div>`;
-  }
-  const ribbon=crit.transformation_ribbon||[];
-  if($("#reference-ribbon")){
-    $("#reference-ribbon").innerHTML=ribbon.length?ribbon.map((step,idx)=>`<div class="ribbon-step" data-kind="${escapeHtml(step.kind)}"><strong>${idx+1}. ${escapeHtml(step.stage_label)}</strong><div>${escapeHtml(step.summary)}</div><div class="small muted">${escapeHtml(spanLabel(step.evidence_refs))}</div></div>`).join('<div class="ribbon-arrow" aria-hidden="true">→</div>'):'<p class="small muted">Importe um diálogo autorizado para reconstruir a cadeia de transformações (proposta → objeção → reformulação).</p>';
-  }
-  const chains=crit.chains||[];
-  if($("#reference-critical-chains")){
-    $("#reference-critical-chains").innerHTML=chains.map((ch,idx)=>`<div class="critical-chain">
-      <div class="small muted"><strong>Cadeia de transformação #${idx+1}</strong> · escopo <code>${escapeHtml(ch.scope)}</code></div>
-      <div class="chain-row"><strong>1. Qual proposta foi questionada?</strong><div>${escapeHtml(ch.questioned_proposal.content)}</div><small class="muted">Âncora: ${escapeHtml(spanLabel(ch.questioned_proposal.evidence_refs))}</small></div>
-      <div class="chain-row objection"><strong>2. O que foi objetado? (${escapeHtml(ch.what_was_objected.relation)})</strong><div>${escapeHtml(ch.what_was_objected.content)}</div><small class="muted">Âncora: ${escapeHtml(spanLabel(ch.what_was_objected.evidence_refs))} · <em>Leitura alternativa:</em> ${escapeHtml(ch.what_was_objected.alternative_reading)}</small>
+function renderChainCard(ch, idx) {
+  const relLabel = MOVE_RELATION_LABEL[ch.what_was_objected.relation] || "Objeção";
+  return `<div class="critical-chain">
+    <div class="chain-header">
+      <strong>Transformação #${idx+1}</strong>
+      <span class="chip" title="Escopo: ${escapeHtml(ch.scope)}">Reconstrução candidata</span>
+    </div>
+    <div class="chain-row">
+      <span class="chain-step-label">1. Proposta questionada</span>
+      <div>${escapeHtml(ch.questioned_proposal.content)}</div>
+    </div>
+    <div class="chain-row objection">
+      <span class="chain-step-label">2. Objeção (${escapeHtml(relLabel)})</span>
+      <div>${escapeHtml(ch.what_was_objected.content)}</div>
+    </div>
+    ${ch.what_changed_after?`<div class="chain-row reformulation">
+      <span class="chain-step-label">3. Reformulação subsequente</span>
+      <div>${escapeHtml(ch.what_changed_after.content)}</div>
+    </div>`:`<div class="chain-row"><span class="chain-step-label">3. Reformulação subsequente</span><div class="muted">Ainda sem nova formulação vinculada.</div></div>`}
+    <div class="chain-row doubt">
+      <span class="chain-step-label">4. Questão em aberto</span>
+      <div>${escapeHtml(ch.remaining_doubt)}</div>
+    </div>
+    <details class="chain-drawer">
+      <summary>Lastro nos turnos, leitura alternativa e avaliação</summary>
+      <div class="chain-drawer-body">
+        <div><strong>Âncora da proposta:</strong> ${escapeHtml(spanLabel(ch.questioned_proposal.evidence_refs))}</div>
+        <div><strong>Âncora da objeção:</strong> ${escapeHtml(spanLabel(ch.what_was_objected.evidence_refs))}</div>
+        ${ch.what_changed_after?`<div><strong>Âncora da reformulação:</strong> ${escapeHtml(spanLabel(ch.what_changed_after.evidence_refs))}</div>`:""}
+        <div><em>Leitura alternativa:</em> ${escapeHtml(ch.what_was_objected.alternative_reading)}</div>
         <div class="disposition-bar">
+          <span class="small muted">Avaliar esta objeção no escopo atual:</span>
           <button class="subtle" type="button" data-dispose-target="${escapeHtml(ch.what_was_objected.id)}" data-dispose="useful">Útil</button>
           <button class="subtle" type="button" data-dispose-target="${escapeHtml(ch.what_was_objected.id)}" data-dispose="not_relevant">Não pertinente</button>
           <button class="subtle" type="button" data-dispose-target="${escapeHtml(ch.what_was_objected.id)}" data-dispose="incorrect_interpretation">Interpretação incorreta</button>
           <button class="subtle" type="button" data-dispose-target="${escapeHtml(ch.what_was_objected.id)}" data-dispose="revisit_later">Revisitar depois</button>
         </div>
       </div>
-      ${ch.what_changed_after?`<div class="chain-row reformulation"><strong>3. O que mudou depois (Reformulação)?</strong><div>${escapeHtml(ch.what_changed_after.content)}</div><small class="muted">Âncora: ${escapeHtml(spanLabel(ch.what_changed_after.evidence_refs))} · <em>Leitura alternativa:</em> ${escapeHtml(ch.what_changed_after.alternative_reading)}</small></div>`:`<div class="chain-row"><small class="muted">3. Nenhuma reformulação subsequente vinculada ainda.</small></div>`}
-      <div class="chain-row doubt"><strong>4. Qual dúvida ou tensão permaneceu?</strong><div>${escapeHtml(ch.remaining_doubt)}</div></div>
-    </div>`).join("");
+    </details>
+  </div>`;
+}
+function renderCriticalTrajectory(data) {
+  const crit=data.critical_trajectory;
+  if(!crit)return;
+  if($("#focus-switcher")&&allNodes.length){
+    $("#focus-switcher").innerHTML=allNodes.slice(0,8).map(n=>`<button type="button" class="focus-switch-btn${n.id===data.node.id?" active":""}" data-open-node="${escapeHtml(n.id)}"><span class="chip">${escapeHtml(KIND_LABEL[n.kind]||n.kind)}</span> <span>${escapeHtml(clipText(n.title, 78))}</span></button>`).join("");
+  }
+  const key=JSON.stringify(crit)+allNodes.length;
+  if(active.critKey===key)return;
+  active.critKey=key;
+  const counts=crit.context_counts||{};
+  if($("#reference-context-counts")){
+    $("#reference-context-counts").innerHTML=`<div class="ctx-pill"><strong>${counts.documents||0}</strong><span>Documentos</span></div><div class="ctx-pill"><strong>${counts.dialogues||0}</strong><span>Discussões</span></div><div class="ctx-pill"><strong>${counts.commits||0}</strong><span>Versões Git</span></div><div class="ctx-pill" title="${counts.moves||0} movimentos reconstruídos"><strong>${counts.transformations||0}</strong><span>Transformações</span></div>`;
+  }
+  const ribbon=crit.transformation_ribbon||[];
+  if($("#reference-ribbon")){
+    $("#reference-ribbon").innerHTML=ribbon.length?ribbon.map((step,idx)=>`<div class="ribbon-step" data-kind="${escapeHtml(step.kind)}" title="${escapeHtml(spanLabel(step.evidence_refs))}"><strong>${idx+1}. ${escapeHtml(step.stage_label)}</strong><div>${escapeHtml(step.summary)}</div><div class="small muted">${escapeHtml(spanLabel(step.evidence_refs, true))}</div></div>`).join('<div class="ribbon-arrow" aria-hidden="true">→</div>'):'<p class="small muted">Importe um diálogo autorizado para reconstruir a cadeia de transformações (proposta → objeção → reformulação).</p>';
+  }
+  const chains=crit.chains||[];
+  if($("#reference-critical-chains")){
+    if(!chains.length){
+      $("#reference-critical-chains").innerHTML="";
+    } else if(chains.length===1){
+      $("#reference-critical-chains").innerHTML=renderChainCard(chains[0], 0);
+    } else {
+      const latestIdx = chains.length - 1;
+      const olderCount = chains.length - 1;
+      const olderHtml = chains.slice(0, latestIdx).map((ch, idx) => renderChainCard(ch, idx)).join("");
+      $("#reference-critical-chains").innerHTML = renderChainCard(chains[latestIdx], latestIdx) + `<details class="older-chains"><summary>Ver ${olderCount === 1 ? "1 transformação anterior" : olderCount + " transformações anteriores"} deste percurso</summary><div class="older-chains-body">${olderHtml}</div></details>`;
+    }
   }
   const contrib=crit.continuum_contributions||{};
   const slots=[contrib.candidate_convergence,contrib.recurring_objection,contrib.tension_contradiction,contrib.next_movement].filter(Boolean);
   if($("#reference-continuum-cards")){
-    $("#reference-continuum-cards").innerHTML=slots.length?slots.map(s=>`<div class="epistemic-card" data-slot="${escapeHtml(s.kind)}"><h4>${escapeHtml(s.label)} <span class="chip">${escapeHtml(s.state)}</span></h4><div>${escapeHtml(s.summary)}</div>${s.alternative_reading?`<div class="small muted"><em>Leitura alternativa:</em> ${escapeHtml(s.alternative_reading)}</div>`:""}${s.evidence_refs?.length?`<div class="small muted">Fonte: ${escapeHtml(spanLabel(s.evidence_refs))}</div>`:""}</div>`).join(""):"";
+    $("#reference-continuum-cards").innerHTML=slots.length?slots.map(s=>`<div class="epistemic-card" data-slot="${escapeHtml(s.kind)}"><div class="epistemic-card-head"><h4>${escapeHtml(s.label)}</h4><span class="chip">${escapeHtml(STATE_LABEL[s.state]||s.state)}</span></div><div class="epistemic-card-body">${escapeHtml(s.summary)}</div>${(s.alternative_reading||(s.evidence_refs&&s.evidence_refs.length))?`<details class="card-drawer"><summary>Fonte e leitura alternativa</summary><div class="card-drawer-body">${s.evidence_refs?.length?`<div><strong>Fonte:</strong> ${escapeHtml(spanLabel(s.evidence_refs))}</div>`:""}${s.alternative_reading?`<div><em>Leitura alternativa:</em> ${escapeHtml(s.alternative_reading)}</div>`:""}</div></details>`:""}</div>`).join(""):"";
+  }
+  if($("#docs-approx-details")&&slots.length===0){
+    $("#docs-approx-details").open=true;
   }
 }
 function renderTransformations(data) {
@@ -291,7 +342,7 @@ async function actions(event){
   target.disabled=true;
   try{
     await request("/api/reference/move/dispose",{id:session.id,target_id:target.dataset.disposeTarget,disposition:target.dataset.dispose,target_kind:"move"});
-    notify(`Disposição '${target.dataset.dispose}' registrada com escopo contextual.`);
+    notify(`Avaliação "${DISPOSE_LABEL[target.dataset.dispose]||target.dataset.dispose}" registrada para este escopo.`);
     await pollReference();
   }finally{target.disabled=false;}
   return;

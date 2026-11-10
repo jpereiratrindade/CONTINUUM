@@ -271,27 +271,44 @@ button.linklike:hover { text-decoration:underline; }
 .workspace-git { border-top: 1px solid var(--line); padding-top: 14px; margin-top: 12px; color: var(--muted); font-size: 12px; }
 .workspace-git summary { cursor: pointer; }
 .workspace-git pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 11px; background: #eef6fb; padding: 11px; border-radius: 8px; max-height: 380px; overflow: auto; }
-.context-counts { display: grid; gap: 6px; margin: 6px 0 12px; padding: 10px 12px; background: #f2f7fb; border-radius: 8px; border: 1px solid var(--line); font-weight: 500; }
+.context-counts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; margin: 6px 0 12px; }
+.ctx-pill { display: flex; flex-direction: column; padding: 7px 10px; background: #f4f8fc; border-radius: 8px; border: 1px solid var(--line); }
+.ctx-pill strong { font-size: 15px; font-weight: 700; color: var(--ink); line-height: 1.15; }
+.ctx-pill span { font-size: 11px; color: var(--muted); }
 .transformation-ribbon { display: flex; flex-wrap: nowrap; overflow-x: auto; align-items: stretch; gap: 10px; padding-bottom: 6px; }
 .ribbon-arrow { display: flex; align-items: center; justify-content: center; color: var(--teal); font-weight: 700; font-size: 16px; flex-shrink: 0; }
-.ribbon-step { flex: 1 0 185px; max-width: 260px; padding: 10px 12px; border-radius: 9px; border: 1px solid var(--line); background: #f8fbfe; font-size: 12px; position: relative; }
+.ribbon-step { flex: 1 0 185px; max-width: 260px; padding: 10px 12px; border-radius: 9px; border: 1px solid var(--line); background: #f8fbfe; font-size: 12px; position: relative; line-height: 1.45; }
 .ribbon-step[data-kind="objection"] { border-color: #d97706; background: #fffbeb; }
 .ribbon-step[data-kind="reformulation"] { border-color: #0d9488; background: #f0fdfa; }
 .ribbon-step[data-kind="proposal"] { border-color: #0284c7; background: #f0f9ff; }
 .ribbon-step strong { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px; color: var(--teal); }
 .ribbon-step[data-kind="objection"] strong { color: #b45309; }
 .critical-chains { display: grid; gap: 10px; margin: 12px 0; }
-.critical-chain { padding: 12px 14px; border-radius: 9px; border: 1px solid var(--line); background: #fbfdff; font-size: 12px; display: grid; gap: 8px; }
-.chain-row { padding: 6px 9px; border-left: 3px solid var(--line); background: #f8fbfe; border-radius: 0 6px 6px 0; }
+.critical-chain { padding: 14px 16px; border-radius: 10px; border: 1px solid var(--line); background: #fbfdff; font-size: 12.5px; display: grid; gap: 8px; line-height: 1.5; }
+.chain-header { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 2px; }
+.chain-header strong { font-size: 12px; text-transform: uppercase; letter-spacing: .03em; color: var(--ink); }
+.chain-row { padding: 8px 11px; border-left: 3px solid var(--line); background: #f8fbfe; border-radius: 0 7px 7px 0; }
+.chain-step-label { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); margin-bottom: 2px; }
 .chain-row.objection { border-left-color: #d97706; background: #fffbeb; }
+.chain-row.objection .chain-step-label { color: #b45309; }
 .chain-row.reformulation { border-left-color: #0d9488; background: #f0fdfa; }
-.chain-row.doubt { border-left-color: #6366f1; background: #eef2ff; }
-.continuum-cards { display: grid; gap: 9px; margin-bottom: 14px; }
-.epistemic-card { padding: 11px 13px; border-radius: 8px; border: 1px solid var(--line); background: #f8fbfe; font-size: 12px; }
+.chain-row.reformulation .chain-step-label { color: #0f766e; }
+.chain-row.doubt { border-left-color: #6366f1; background: #f5f7ff; }
+.chain-row.doubt .chain-step-label { color: #4338ca; }
+.chain-drawer, .card-drawer { margin-top: 2px; font-size: 11px; color: var(--muted); }
+.chain-drawer > summary, .card-drawer > summary { cursor: pointer; font-weight: 500; color: #3a607e; user-select: none; }
+.chain-drawer-body, .card-drawer-body { margin-top: 6px; padding: 8px 10px; border-radius: 6px; background: #f2f7fb; border: 1px solid var(--line); display: grid; gap: 4px; line-height: 1.45; }
+.older-chains { border: 1px dashed var(--line); border-radius: 9px; padding: 8px 12px; background: #f8fbfe; font-size: 12px; }
+.older-chains > summary { cursor: pointer; font-weight: 600; color: #1b5c85; }
+.older-chains-body { display: grid; gap: 10px; margin-top: 10px; }
+.continuum-cards { display: grid; gap: 10px; margin-bottom: 14px; }
+.epistemic-card { padding: 12px 14px; border-radius: 9px; border: 1px solid var(--line); background: #f8fbfe; font-size: 12.5px; line-height: 1.5; display: grid; gap: 6px; }
 .epistemic-card[data-slot="candidate_convergence"] { border-left: 4px solid #0d9488; }
 .epistemic-card[data-slot="recurring_objection"] { border-left: 4px solid #d97706; background: #fffdf5; }
 .epistemic-card[data-slot="tension_contradiction"] { border-left: 4px solid #0284c7; }
 .epistemic-card[data-slot="next_movement"] { border-left: 4px solid #16a34a; background: #f4fdf7; }
-.epistemic-card h4 { margin: 0 0 4px; font-size: 12px; color: var(--ink); }
-.disposition-bar { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+.epistemic-card-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.epistemic-card-head h4 { margin: 0; font-size: 12px; font-weight: 700; color: var(--ink); }
+.epistemic-card-body { color: var(--ink); }
+.disposition-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin-top: 4px; }
 .disposition-bar button { font-size: 11px; padding: 4px 8px; }

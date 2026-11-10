@@ -301,7 +301,31 @@ class ContinuityTests(unittest.TestCase):
         self.assertIsNotNone(contrib['recurring_objection'])
         self.assertIsNotNone(contrib['tension_contradiction'])
         self.assertIsNotNone(contrib['next_movement'])
+        self.assertNotEqual(
+            contrib['recurring_objection']['summary'],
+            contrib['tension_contradiction']['summary'],
+        )
         self.assertGreaterEqual(len(crit['transformation_ribbon']), 5)
+
+        # INV-T04: Multi-proposal target resolution by conceptual overlap (not blind proximity to last proposal)
+        other_node = self.call('create_node', kind='question', title='Resolução de alvo entre múltiplas propostas', body='Contexto')
+        multi_transcript = (
+            'Assistente: Propomos estrutura: exibir painéis de commits Git e tabelas manuais.\n'
+            'Assistente: Propomos também calcular índices acústicos de biodiversidade em áudio.\n'
+            'Usuário: Mas uma planilha melhorada ou painéis de commits Git e tabelas não resolve: commit é ferramenta e não fim.\n'
+        )
+        self.call(
+            'import_dialogue',
+            id=other_node['id'],
+            conversation_id='conv-multi-prop-2026',
+            scope='authorized:continuum-research',
+            title='Múltiplas propostas',
+            dialogue_text=multi_transcript,
+        )
+        multi_crit = self.call('critical_trajectory', id=other_node['id'])
+        self.assertEqual(len(multi_crit['chains']), 1)
+        self.assertIn('commits Git', multi_crit['chains'][0]['questioned_proposal']['content'])
+        self.assertNotIn('acústicos', multi_crit['chains'][0]['questioned_proposal']['content'])
 
         # INV-T15: Operational objection memory warns when repeating an already-objected proposal in same scope
         check = self.call(

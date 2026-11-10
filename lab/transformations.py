@@ -265,57 +265,133 @@ def verify_evidence_refs(lab: Lab, evidence_refs: list[dict[str, Any]]) -> list[
     return verified
 
 
+def _clip(text: str, limit: int = 240) -> str:
+    """Truncate text cleanly at sentence or word boundaries without cutting words in half."""
+    clean = " ".join(str(text or "").split())
+    if len(clean) <= limit:
+        return clean
+    cut = clean[:limit]
+    last_space = cut.rfind(" ")
+    if last_space > limit // 2:
+        cut = cut[:last_space]
+    return cut.rstrip(" ,;:-—") + "…"
+
+
 def _classify_segment(seg: str, role: str, index_in_turn: int, turn_index: int) -> str:
     """Classify a discourse segment into a candidate IntellectualMove kind."""
-    low = seg.lower()
-    # Explicit objection / critique markers
+    low = seg.lower().strip()
+    # 1. Explicit questions at the end of a segment (unless it is a rhetorical proposal)
+    if low.endswith("?") and any(q in low for q in ("como ", "qual ", "quais ", "por que ", "o que ", "onde ", "quando ", "será", "sera")):
+        return "question"
+
+    # 2. Methodological qualifications / conditions (checked before objection so 'Cuidado fundamental...' is a qualification)
+    qualification_prefixes = (
+        "cuidado fundamental", "condição:", "condicao:", "ressalva:", "restrição:", "restricao:",
+        "nota metodológica", "importante distinguir",
+    )
+    qualification_markers = (
+        "cuidado fundamental", "condição limitante", "condicao limitante",
+        "salvo ", "desde que ", "sem apagar", "sem converter", "não significa que",
+        "nao significa que", "deve permanecer candidat",
+    )
+    if low.startswith(qualification_prefixes) or (
+        any(m in low for m in qualification_markers)
+        and not low.startswith(("mas ", "porém", "entretanto", "como está", "mesmo "))
+    ):
+        return "qualification"
+
+    # 3. Reformulations (shifting the problem framing or unit of analysis)
+    reformulation_markers = (
+        "reformul", "mudança de perspectiva", "mudanca de perspectiva", "deixar de pensar",
+        "deixar de apenas", "passar a ", "em vez de ", "ao invés de ", "ao inves de ",
+        "propósito original", "proposito original", "verdadeiro achado", "hipótese constituinte",
+        "hipotese constituinte", "unidade fundamental", "redirecionamento",
+        "precisamos preservar as transformações", "precisamos preservar as transformacoes",
+        "repensando", "reconstruir e investigar", "reconstruir as transformações",
+    )
+    if any(m in low for m in reformulation_markers) and any(
+        m in low for m in ("deixar de", "em vez de", "passar a", "não consiste somente", "nao consiste somente", "transformação", "transformacao", "transformações", "redirecionamento")
+    ):
+        return "reformulation"
+
+    # 4. Objections (explicit and indirect critiques of sufficiency/direction)
     objection_markers = (
         "mas ", "porém", "entretanto", "contudo", "todavia", "não resolve", "nao resolve",
         "não basta", "nao basta", "insuficiente", "insuficiência", "problema é", "problema esta",
-        "como está é como", "como esta e como", "apenas ", "só disponibiliza", "so disponibiliza",
+        "como está é como", "como esta e como", "só disponibiliza", "so disponibiliza",
         "não demonstra", "nao demonstra", "não equivale", "nao equivale", "reduzir a", "máquina de escrever",
         "planilha", "reprodução de tabelas", "reproducao de tabelas", "não é fim", "nao e fim",
         "desperdiçando", "desperdicando", "falha em", "objeção", "objecao", "crítica", "critica",
+        "perde a história", "perde a historia", "faltam ferramentas", "falta uma abstração",
+        "falta uma abstracao", "continua exigindo", "caindo no mesmo", "mesmo a análise", "mesmo aproximar",
     )
-    reformulation_markers = (
-        "reformul", "mudança de perspectiva", "mudanca de perspectiva", "deixar de pensar",
-        "passar a ", "em vez de ", "ao invés de ", "ao inves de ", "propósito original",
-        "proposito original", "verdadeiro achado", "hipótese constituinte", "hipotese constituinte",
-        "unidade fundamental", "redirecionamento", "precisamos preservar as transformações",
-        "precisamos preservar as transformacoes", "repensando", "reconstruir e investigar",
-    )
-    qualification_markers = (
-        "cuidado fundamental", "condição", "condicao", "limitação", "limitacao",
-        "salvo ", "desde que ", "sem apagar", "sem converter", "não significa que",
-        "nao significa que", "exige ", "restrição", "restricao",
-    )
+    if any(m in low for m in objection_markers):
+        return "objection"
+
+    # 5. Decisions / directives
     decision_markers = (
         "decisão", "decisao", "ordem direta", "prioridade imediata", "vamos usar",
         "adotar ", "começar por", "comecar por",
     )
-    proposal_markers = (
-        "proponho", "proporia", "proposta", "podemos ", "poderíamos", "poderiamos",
-        "sugiro", "arquitetura", "incluir técnicas", "incluir tecnicas", "rag", "vector",
-        "vetorial", "embeddings", "vamos ", "construir ", "implementar ", "criar uma interface",
-    )
-
-    if any(m in low for m in reformulation_markers) and any(m in low for m in ("deixar de", "em vez de", "passar a", "não consiste somente", "nao consiste somente", "transformação", "transformacao", "redirecionamento")):
-        return "reformulation"
-    if any(m in low for m in objection_markers):
-        return "objection"
-    if any(m in low for m in qualification_markers):
-        return "qualification"
     if any(m in low for m in decision_markers):
         return "decision"
-    if "?" in seg and (role == "user" or any(q in low for q in ("como ", "qual ", "por que ", "o que ", "será", "sera"))):
-        if any(m in low for m in proposal_markers):
-            return "proposal"
-        return "question"
+
+    # 6. Proposals
+    proposal_markers = (
+        "proponho", "proporia", "proposta", "propomos", "podemos ", "poderíamos", "poderiamos",
+        "sugiro", "arquitetura", "incluir técnicas", "incluir tecnicas", "rag", "vector",
+        "vetorial", "embeddings", "construir ", "implementar ", "criar uma interface",
+        "estruturar painéis", "estruturar o laboratório", "avançamos para",
+    )
     if any(m in low for m in proposal_markers):
         return "proposal"
+
+    if "?" in seg:
+        return "question"
     if turn_index == 0 and index_in_turn == 0:
-        return "question" if "?" in seg else "proposal"
+        return "proposal"
     return "observation"
+
+
+def _resolve_best_target(
+    move: dict[str, Any],
+    candidates: list[dict[str, Any]],
+    allow_discourse_adjacency: bool = False,
+    immediate_prev: dict[str, Any] | None = None,
+) -> tuple[dict[str, Any] | None, str, float]:
+    """INV-T04: Resolve which prior move is addressed by comparing conceptual overlap and discourse connectors."""
+    if not candidates:
+        return None, "", 0.0
+    best_target = None
+    best_score = -1.0
+    best_basis = ""
+    low = move["content"].lower().strip()
+    has_anaphoric_connector = low.startswith((
+        "mas ", "porém", "entretanto", "contudo", "como está", "isso ", "essa ", "esse ",
+        "mesmo ", "então", "precisamos deixar de", "precisamos reformular",
+    ))
+
+    for cand in candidates:
+        score, shared = overlap(cand["content"], move["content"])
+        effective = score + (0.04 * len(shared))
+        # Only add adjacency weight if there is an explicit anaphoric/contrastive discourse connector
+        if allow_discourse_adjacency and immediate_prev and cand["id"] == immediate_prev["id"] and has_anaphoric_connector:
+            effective += 0.15
+        if effective > best_score:
+            best_score = effective
+            best_target = cand
+            best_basis = (
+                f"conceptual_overlap({','.join(shared[:4])})"
+                if shared
+                else "anaphoric_discourse_connector"
+            )
+
+    if best_score <= 0.0:
+        # Fallback only if there is a direct contrastive/anaphoric reply to the immediately preceding candidate
+        if allow_discourse_adjacency and immediate_prev and immediate_prev in candidates and has_anaphoric_connector:
+            return immediate_prev, "direct_contrastive_reply", 0.15
+        return None, "", 0.0
+    return best_target, best_basis, round(best_score, 3)
 
 
 def _split_turn_segments(text: str) -> list[tuple[int, int, str]]:
@@ -558,13 +634,19 @@ def extract_candidate_moves(lab: Lab, trajectory_id: str, dialogue_id: str) -> d
                 })
 
         # Build typed candidate transformations (proposal -> objection -> reformulation, question -> proposal, etc.)
-        # INV-T04: Never confirm or create a relation solely by temporal proximity; require discourse role transitions or lexical/argumentative bridges.
+        # INV-T04: Never confirm or create a relation solely by temporal proximity; resolve against all prior candidates.
         candidate_transforms: list[dict[str, Any]] = []
-        last_by_kind: dict[str, dict[str, Any]] = {}
+        prior_moves: list[dict[str, Any]] = []
 
         for idx, move in enumerate(candidate_moves):
             mkind = move["kind"]
             prev_move = candidate_moves[idx - 1] if idx > 0 else None
+            prior_proposals = [m for m in prior_moves if m["kind"] == "proposal"]
+            prior_objections = [m for m in prior_moves if m["kind"] == "objection"]
+            prior_reforms = [m for m in prior_moves if m["kind"] == "reformulation"]
+            prior_questions = [m for m in prior_moves if m["kind"] == "question"]
+            prior_observations = [m for m in prior_moves if m["kind"] == "observation"]
+
             target_move = None
             relation = None
             basis = None
@@ -576,69 +658,79 @@ def extract_candidate_moves(lab: Lab, trajectory_id: str, dialogue_id: str) -> d
                     relation = "reformulates"
                     basis = "proposal_after_objection_shift"
                     alt_reading = "A nova proposta pode explorar uma frente alternativa sem resolver integralmente a objeção anterior."
-                elif "reformulation" in last_by_kind:
-                    target_move = last_by_kind["reformulation"]
-                    relation = "informs"
-                    basis = "discourse_role_transition+lexical_bridge"
-                    alt_reading = "A nova proposta pode inaugurar uma frente paralela, sem decorrer diretamente da reformulação anterior."
-                elif "question" in last_by_kind:
-                    target_move = last_by_kind["question"]
-                    relation = "responds_to"
-                    basis = "question_to_proposal_markers"
-                    alt_reading = "A proposta pode endereçar apenas um recorte técnico lateral da questão inicial."
-                elif "proposal" in last_by_kind:
-                    prev_prop = last_by_kind["proposal"]
-                    score, shared = overlap(prev_prop["content"], move["content"])
-                    if score > 0 or idx > 0:
-                        target_move = prev_prop
+                elif prior_reforms:
+                    target_move, basis, _ = _resolve_best_target(move, prior_reforms, True, prev_move)
+                    if target_move:
+                        relation = "informs"
+                        alt_reading = "A nova proposta pode inaugurar uma frente paralela, sem decorrer diretamente da reformulação anterior."
+                elif prior_questions:
+                    target_move, basis, _ = _resolve_best_target(move, prior_questions, True, prev_move)
+                    if not target_move and idx == 1 and prior_questions:
+                        target_move = prior_questions[-1]
+                        basis = "initial_question_response"
+                    if target_move:
+                        relation = "responds_to"
+                        alt_reading = "A proposta pode endereçar apenas um recorte técnico lateral da questão inicial."
+                elif prior_proposals:
+                    target_move, basis, score = _resolve_best_target(move, prior_proposals, False, None)
+                    if target_move and score > 0.0:
                         relation = "alternates_with"
-                        basis = "successive_proposals_comparison"
                         alt_reading = "A segunda proposta pode complementar a primeira em vez de competir com ela."
+                    else:
+                        target_move = None
 
             elif mkind == "objection":
-                if "proposal" in last_by_kind:
-                    target_move = last_by_kind["proposal"]
-                    relation = "objects_to"
-                    basis = "contrastive_objection_markers"
-                    alt_reading = "A crítica pode referir-se apenas à forma de apresentação ou interface, e não à arquitetura inteira da proposta."
-                elif "observation" in last_by_kind:
-                    target_move = last_by_kind["observation"]
-                    relation = "challenges"
-                    basis = "contrastive_objection_markers"
-                    alt_reading = "A ressalva pode apontar um limite de escopo do experimento, sem invalidar o dado observado."
+                if prior_proposals:
+                    target_move, basis, _ = _resolve_best_target(move, prior_proposals, True, prev_move)
+                    if not target_move and prev_move and prev_move["kind"] == "proposal":
+                        target_move = prev_move
+                        basis = "direct_turn_objection"
+                    if target_move:
+                        relation = "objects_to"
+                        alt_reading = "A crítica pode referir-se apenas à forma de apresentação ou interface, e não à arquitetura inteira da proposta."
+                elif prior_observations:
+                    target_move, basis, _ = _resolve_best_target(move, prior_observations, True, prev_move)
+                    if target_move:
+                        relation = "challenges"
+                        alt_reading = "A ressalva pode apontar um limite de escopo do experimento, sem invalidar o dado observado."
 
             elif mkind == "qualification":
-                target_move = last_by_kind.get("proposal") or last_by_kind.get("reformulation")
+                cands = prior_reforms + prior_proposals
+                target_move, basis, _ = _resolve_best_target(move, cands, True, prev_move)
+                if not target_move and cands:
+                    target_move = cands[-1]
+                    basis = "scope_qualification_condition"
                 if target_move:
                     relation = "constrains"
-                    basis = "conditional_qualification_markers"
-                    alt_reading = "A condição enunciada pode ser uma diretriz geral do projeto, não restrita apenas a esta proposta."
+                    alt_reading = "A condição enunciada pode ser uma diretriz geral do projeto, não restrita apenas a esta formulação."
 
             elif mkind == "reformulation":
-                if "objection" in last_by_kind:
-                    target_move = last_by_kind["objection"]
+                if prior_objections:
+                    target_move, basis, _ = _resolve_best_target(move, prior_objections, True, prev_move)
+                    if not target_move:
+                        target_move = prior_objections[-1]
+                        basis = "objection_to_reformulation_bridge"
                     relation = "reformulates"
-                    basis = "objection_to_reformulation_bridge"
                     alt_reading = "A reformulação pode introduzir uma nova hipótese independente, sem resolver integralmente a objeção anterior."
-                elif "proposal" in last_by_kind:
-                    target_move = last_by_kind["proposal"]
-                    relation = "reformulates"
-                    basis = "proposal_revision_markers"
-                    alt_reading = "A nova formulação pode ser uma mudança de vocabulário sem alterar o pressuposto técnico anterior."
+                elif prior_proposals:
+                    target_move, basis, _ = _resolve_best_target(move, prior_proposals, True, prev_move)
+                    if target_move:
+                        relation = "reformulates"
+                        alt_reading = "A nova formulação pode ser uma mudança de vocabulário sem alterar o pressuposto técnico anterior."
 
             elif mkind == "decision":
-                target_move = last_by_kind.get("reformulation") or last_by_kind.get("proposal")
+                cands = prior_reforms + prior_proposals
+                target_move, basis, _ = _resolve_best_target(move, cands, True, prev_move)
                 if target_move:
                     relation = "depends_on"
-                    basis = "decision_grounding_markers"
                     alt_reading = "A decisão prática pode ter sido tomada por restrição de prazo/escopo, não como validação definitiva da tese."
 
             elif mkind == "question" and idx > 0:
-                target_move = last_by_kind.get("objection") or last_by_kind.get("reformulation") or last_by_kind.get("proposal")
+                cands = prior_reforms + prior_objections + prior_proposals
+                target_move, basis, _ = _resolve_best_target(move, cands, True, prev_move)
                 if target_move:
-                    relation = "challenges" if target_move["kind"] == "proposal" else "informs"
-                    basis = "emergent_question_after_tension"
-                    alt_reading = "A nova pergunta pode abrir um subproblema distinto em vez de tensionar diretamente o movimento anterior."
+                    relation = "informs"
+                    alt_reading = "A nova pergunta pode abrir um subproblema distinto em vez de desdobrar diretamente o movimento anterior."
 
             if target_move and relation and basis and alt_reading:
                 comb_refs = target_move["evidence_refs"][:1] + move["evidence_refs"][:1]
@@ -658,7 +750,7 @@ def extract_candidate_moves(lab: Lab, trajectory_id: str, dialogue_id: str) -> d
                     "reason": f"Movimento '{mkind}' vinculado a '{target_move['kind']}' via {basis}",
                 })
 
-            last_by_kind[mkind] = move
+            prior_moves.append(move)
 
         def persist():
             for m in candidate_moves:
@@ -1132,7 +1224,8 @@ def critical_trajectory(lab: Lab, trajectory_id: str) -> dict[str, Any]:
         tgt = moves_by_id.get(tr["target_move_id"])
         if not src or not tgt:
             continue
-        if tr["relation"] in ("objects_to", "challenges", "constrains"):
+        # Only actual objection moves form objection chains; qualifications are constraints/tensions, questions are open doubts
+        if tr["relation"] in ("objects_to", "challenges") and src["kind"] == "objection":
             objections_to_proposal.setdefault(tgt["id"], []).append((src, tr))
         elif tr["relation"] == "reformulates":
             reformulations_of_move.setdefault(tgt["id"], []).append((src, tr))
@@ -1142,11 +1235,16 @@ def critical_trajectory(lab: Lab, trajectory_id: str) -> dict[str, Any]:
     # 2. O que foi objetado?
     # 3. O que mudou depois?
     # 4. Qual dúvida permaneceu?
-    open_questions = [m for m in grounded_moves if m["kind"] in ("question", "qualification")]
+    open_questions = [m for m in grounded_moves if m["kind"] == "question"]
+    qualifications_all = [m for m in grounded_moves if m["kind"] == "qualification"]
     default_remaining_doubt = (
         open_questions[-1]["content"]
         if open_questions
-        else f"Verificar se a reformulação responde na prática à questão: {node['title']}"
+        else (
+            qualifications_all[-1]["content"]
+            if qualifications_all
+            else f"Verificar se a reformulação responde na prática à questão: {node['title']}"
+        )
     )
 
     chains: list[dict[str, Any]] = []
@@ -1160,18 +1258,18 @@ def critical_trajectory(lab: Lab, trajectory_id: str) -> dict[str, Any]:
             reforms = reformulations_of_move.get(obj_move["id"]) or reformulations_of_move.get(prop_id) or []
             reform_move, reform_tr = reforms[0] if reforms else (None, None)
 
-            # Determine remaining doubt after this objection/reformulation
-            later_doubts = [
+            # Determine remaining doubt after this objection/reformulation (prefer open questions, then qualifications)
+            later_questions = [
                 m for m in grounded_moves
-                if m["kind"] in ("question", "qualification", "objection")
-                and m["id"] not in (proposal_move["id"], obj_move["id"], reform_move["id"] if reform_move else "")
+                if m["kind"] == "question"
+                and m["id"] != proposal_move["id"]
                 and m["evidence_refs"][0]["turn_order"] >= (
                     reform_move["evidence_refs"][0]["turn_order"]
                     if reform_move
                     else obj_move["evidence_refs"][0]["turn_order"]
                 )
             ]
-            remaining_doubt = later_doubts[-1]["content"] if later_doubts else default_remaining_doubt
+            remaining_doubt = later_questions[-1]["content"] if later_questions else default_remaining_doubt
 
             chain_item = {
                 "questioned_proposal": {
@@ -1240,13 +1338,13 @@ def critical_trajectory(lab: Lab, trajectory_id: str) -> dict[str, Any]:
                 "target_move_id": reform_move["id"] if reform_move else obj_move["id"],
                 "kind": "interpretive_candidate",
                 "heading": (
-                    reform_move["content"][:140]
+                    _clip(reform_move["content"], 160)
                     if reform_move
-                    else f"Tensão aberta sobre: {proposal_move['content'][:110]}"
+                    else f"Tensão aberta sobre: {_clip(proposal_move['content'], 120)}"
                 ),
                 "trajectory_id": trajectory_id,
                 "what_changed": (
-                    f"De '{proposal_move['content'][:120]}' para '{reform_move['content'][:120]}'"
+                    f"De '{_clip(proposal_move['content'], 120)}' para '{_clip(reform_move['content'], 120)}'"
                     if reform_move
                     else "Proposta contestada aguarda reformulação ou verificação de escopo"
                 ),
@@ -1256,9 +1354,7 @@ def critical_trajectory(lab: Lab, trajectory_id: str) -> dict[str, Any]:
                 "alternative_reading": (
                     reform_tr["alternative_reading"] if reform_tr else obj_tr["alternative_reading"]
                 ),
-                "possible_movement": (
-                    f"Investigar a dúvida remanescente ('{remaining_doubt[:140]}') sem repetir a proposta contestada sem nova condição."
-                ),
+                "possible_movement": _clip(remaining_doubt, 240),
                 "state": "candidate",
             })
 
@@ -1277,60 +1373,109 @@ def critical_trajectory(lab: Lab, trajectory_id: str) -> dict[str, Any]:
         dlg_count = lab.db.execute(
             "SELECT COUNT(*) FROM dialogues WHERE trajectory_id=? AND active=1", (trajectory_id,)
         ).fetchone()[0]
+        other_nodes = lab.db.execute(
+            "SELECT id, kind, title, body FROM nodes WHERE id != ? AND status IN ('open', 'active') ORDER BY updated_at DESC LIMIT 10",
+            (trajectory_id,),
+        ).fetchall()
 
-    # Build the 4 "Contribuições do CONTINUUM" slots from the infographic:
-    # 1. Convergência candidata | 2. Objeção recorrente | 3. Tensão / contradição | 4. Próximo movimento
+    # Build the 4 "Contribuições do CONTINUUM" slots with distinct, non-duplicative analytical roles:
+    # 1. Convergência candidata (cross-trajectory / reformulation synthesis)
+    # 2. Objeção recorrente / ativa (from active_objections, checking recurrence)
+    # 3. Tensão / contradição (from qualifications or proposal-vs-objection contrast, never duplicating card 2)
+    # 4. Próximo movimento (actionable open question / direction)
     reforms_all = [m for m in grounded_moves if m["kind"] == "reformulation"]
     proposals_all = [m for m in grounded_moves if m["kind"] == "proposal"]
-    qualifications_all = [m for m in grounded_moves if m["kind"] == "qualification"]
-
     conv_source = reforms_all[-1] if reforms_all else (proposals_all[-1] if proposals_all else grounded_moves[-1])
+
+    cross_match = None
+    best_cross_score = 0.0
+    cross_terms: list[str] = []
+    for onode in other_nodes:
+        sc, sh = overlap(node["title"] + " " + conv_source["content"], onode["title"] + " " + onode["body"])
+        if sc > best_cross_score and len(sh) >= 2:
+            best_cross_score = sc
+            cross_match = dict(onode)
+            cross_terms = sh[:5]
+
+    if cross_match:
+        conv_summary = (
+            f"Convergência entre este percurso e '{_clip(cross_match['title'], 95)}': "
+            f"{_clip(conv_source['content'], 190)} (termos em comum: {', '.join(cross_terms)})."
+        )
+    else:
+        conv_summary = _clip(conv_source["content"], 240)
+
     candidate_convergence = {
         "kind": "candidate_convergence",
         "label": "Convergência candidata",
-        "summary": conv_source["content"][:220],
+        "summary": conv_summary,
         "move_id": conv_source["id"],
+        "related_trajectory_id": cross_match["id"] if cross_match else None,
         "evidence_refs": conv_source["evidence_refs"],
         "state": "candidate",
     }
 
     recurring_objection = None
+    used_move_ids = {conv_source["id"]}
     if active_objections:
         top_obj = active_objections[-1]
+        used_move_ids.add(top_obj["id"])
+        if len(active_objections) >= 2:
+            first_obj = active_objections[0]
+            obj_label = f"Objeção recorrente ({len(active_objections)} ocorrências)"
+            obj_summary = (
+                f"Padrão crítico recorrente: (1) {_clip(first_obj['content'], 115)} · "
+                f"(2) {_clip(top_obj['content'], 115)}"
+            )
+        else:
+            obj_label = "Objeção ativa no escopo"
+            obj_summary = _clip(top_obj["content"], 240)
+
         recurring_objection = {
             "kind": "recurring_objection",
-            "label": "Objeção recorrente",
-            "summary": top_obj["content"][:220],
-            "contested_proposal": top_obj["contested_proposal_content"][:180],
+            "label": obj_label,
+            "summary": obj_summary,
+            "contested_proposal": _clip(top_obj["contested_proposal_content"], 180),
             "move_id": top_obj["id"],
             "evidence_refs": top_obj["evidence_refs"],
             "alternative_reading": top_obj["alternative_reading"],
             "state": "candidate",
         }
 
-    tension_source = (
-        qualifications_all[-1]
-        if qualifications_all
-        else (open_tensions[-1] if open_tensions else None)
-    )
+    tension_candidates = [m for m in qualifications_all if m["id"] not in used_move_ids]
+    if tension_candidates:
+        t_src = tension_candidates[-1]
+        used_move_ids.add(t_src["id"])
+        t_summary = _clip(t_src["content"], 240)
+        t_refs = t_src["evidence_refs"]
+        t_id = t_src["id"]
+    elif chains:
+        last_ch = chains[-1]
+        t_summary = (
+            f"Tensão entre a proposta ('{_clip(last_ch['questioned_proposal']['content'], 95)}') "
+            f"e a crítica registrada ('{_clip(last_ch['what_was_objected']['content'], 95)}')."
+        )
+        t_refs = last_ch["what_was_objected"]["evidence_refs"]
+        t_id = last_ch["what_was_objected"]["id"]
+    else:
+        t_summary = _clip(default_remaining_doubt, 240)
+        t_refs = []
+        t_id = None
+
     tension_contradiction = {
         "kind": "tension_contradiction",
-        "label": "Tensão / contradição",
-        "summary": tension_source["content"][:220] if tension_source else default_remaining_doubt[:220],
-        "move_id": tension_source["id"] if tension_source else None,
-        "evidence_refs": tension_source["evidence_refs"] if tension_source else [],
+        "label": "Tensão / condição",
+        "summary": t_summary,
+        "move_id": t_id,
+        "evidence_refs": t_refs,
         "state": "candidate",
     }
 
     next_movement_slot = {
         "kind": "next_movement",
         "label": "Próximo movimento",
-        "summary": (
-            cards[-1]["possible_movement"]
-            if cards
-            else f"Examinar as condições em aberto sobre '{conv_source['content'][:120]}' antes de consolidar decisão."
-        ),
-        "basis_move_id": conv_source["id"],
+        "summary": _clip(default_remaining_doubt, 240),
+        "basis_move_id": open_questions[-1]["id"] if open_questions else conv_source["id"],
         "state": "candidate",
     }
 
@@ -1352,7 +1497,7 @@ def critical_trajectory(lab: Lab, trajectory_id: str) -> dict[str, Any]:
             "move_id": m["id"],
             "kind": m["kind"],
             "stage_label": stage_labels.get(m["kind"], m["kind"]),
-            "summary": m["content"][:140],
+            "summary": _clip(m["content"], 135),
             "evidence_refs": m["evidence_refs"],
             "status": m["status"],
         })
