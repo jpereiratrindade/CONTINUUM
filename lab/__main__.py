@@ -1,5 +1,6 @@
 """CLI entry point: stdlib-only prototype."""
 import argparse
+import errno
 import json
 from pathlib import Path
 
@@ -31,7 +32,17 @@ def main():
     try:
         if args.command == "serve":
             from .server import serve
-            serve(lab,port=args.port,scan_every=args.scan_every,ollama_model=args.ollama_model)
+            try:
+                serve(lab,port=args.port,scan_every=args.scan_every,ollama_model=args.ollama_model)
+            except OSError as exc:
+                if exc.errno != errno.EADDRINUSE:
+                    raise
+                p.exit(2, f"A porta {args.port} já está em uso. "
+                       f"Se o CONTINUUM já estiver aberto, acesse http://127.0.0.1:{args.port}. "
+                       "Para iniciar esta instância, encerre o processo que ocupa a porta "
+                       "ou escolha outra com --port.\n")
+            except KeyboardInterrupt:
+                pass
         elif args.command == "mcp":
             from .mcp import serve
             serve(lab, allow_writes=args.allow_writes)
