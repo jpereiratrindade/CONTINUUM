@@ -73,7 +73,8 @@ def _is_allowed_host(hostname: str, bind_host: str) -> bool:
 
 
 def create_handler(lab: Lab, ollama_model: str = "", mcp_allow_writes: bool = False, mcp_token: str = ""):
-    mcp_dispatcher = MCPHTTPDispatcher(lab, allow_writes=mcp_allow_writes)
+    effective_allow_writes = mcp_allow_writes or os.environ.get("LAB_MCP_ALLOW_WRITES", "").lower() in ("1", "true", "yes")
+    mcp_dispatcher = MCPHTTPDispatcher(lab, allow_writes=effective_allow_writes)
     effective_token = mcp_token or os.environ.get("LAB_MCP_TOKEN", "")
 
     class Handler(BaseHTTPRequestHandler):
@@ -129,6 +130,13 @@ def create_handler(lab: Lab, ollama_model: str = "", mcp_allow_writes: bool = Fa
                 raise
 
         def do_GET(self):
+            path = urllib.parse.urlsplit(self.path).path
+            if path.startswith("/.well-known/"):
+                self._send(404, {"error": "OAuth discovery não habilitado"})
+                return
+            if path == "/mcp" or path.startswith("/mcp/"):
+                self._send(405, {"error": "Use POST /mcp para JSON-RPC MCP Streamable HTTP"}, extra_headers={"Allow": "POST, OPTIONS"})
+                return
             self._dispatch(self._get)
 
         def _get(self):
@@ -150,6 +158,8 @@ def create_handler(lab: Lab, ollama_model: str = "", mcp_allow_writes: bool = Fa
                 self._send(200, result["markdown"].encode("utf-8"), "text/markdown; charset=utf-8", "continuum-texto.md")
             elif path == "/api/reference/git":
                 self._send(200, execute(lab, "git_history", {"id": arg("id")}))
+            elif path == "/api/reference/critical":
+                self._send(200, execute(lab, "critical_trajectory", {"id": arg("id")}))
             elif path == "/api/reference":
                 self._send(200, execute(lab, "reference", {"id": arg("id")}))
             elif path in ("/api/nodes", "/api/node", "/api/documents", "/api/document", "/api/events", "/api/verify", "/api/anchor"):
@@ -169,36 +179,55 @@ def create_handler(lab: Lab, ollama_model: str = "", mcp_allow_writes: bool = Fa
             elif path == "/api/export":
                 pack=markdown_pack(discover(lab,arg("q"))).encode("utf-8")
                 self._send(200,pack,"text/markdown; charset=utf-8","roteiro-continuidade.md")
-            elif path == "/mcp":
-                self._send(405,{"error":"Use POST /mcp para JSON-RPC MCP Streamable HTTP"},extra_headers={"Allow":"POST"})
+            elif path == "/mcp" or path.startswith("/mcp/"):
+                self._send(405,{"error":"Use POST /mcp para JSON-RPC MCP Streamable HTTP"},extra_headers={"Allow":"POST, OPTIONS"})
             else:
                 self._send(404,{"error":"Rota não encontrada"})
 
+        def do_OPTIONS(self):
+            path = urllib.parse.urlsplit(self.path).path
+            if path == "/mcp" or path.startswith("/mcp/"):
+                self._send(204, b"", "text/plain; charset=utf-8", extra_headers={"Allow": "POST, OPTIONS"})
+            else:
+                self._send(404, {"error": "Rota não encontrada"})
+
+        def do_DELETE(self):
+            path = urllib.parse.urlsplit(self.path).path
+            if path == "/mcp" or path.startswith("/mcp/"):
+                self._send(204, b"", "text/plain; charset=utf-8")
+            else:
+                self._send(404, {"error": "Rota não encontrada"})
+
         def do_POST(self):
-            if urllib.parse.urlsplit(self.path).path == "/mcp":
-                self._post_mcp()
+            path = urllib.parse.urlsplit(self.path).path
+            if path == "/mcp" or path.startswith("/mcp/"):
+                self._post_mcp(path)
                 return
             self._dispatch(self._post)
 
-        def _post_mcp(self):
+        def _post_mcp(self, path: str = "/mcp"):
             try:
-                origin = self.headers.get("Origin", "")
-                if origin:
-                    bind_host = str(self.server.server_address[0])
-                    parsed = urllib.parse.urlparse(origin)
-                    origin_host = (parsed.hostname or "").lower()
-                    if parsed.scheme != "http" or not _is_allowed_host(origin_host, bind_host) or parsed.port != self.server.server_port:
-                        self._send(403, {"error": "Origin não local rejeitado no endpoint MCP"})
-                        return
                 if effective_token:
+                    path_token = path[len("/mcp/"):].strip("/") if path.startswith("/mcp/") else ""
                     auth = self.headers.get("Authorization", "")
-                    expected = f"Bearer {effective_token}"
-                    if not hmac.compare_digest(auth.encode("utf-8"), expected.encode("utf-8")):
+                    expected_bearer = f"Bearer {effective_token}"
+                    bearer_ok = hmac.compare_digest(auth.encode("utf-8"), expected_bearer.encode("utf-8"))
+                    path_ok = bool(path_token) and hmac.compare_digest(path_token.encode("utf-8"), effective_token.encode("utf-8"))
+                    if not (bearer_ok or path_ok):
                         self._send(401, {"error": "Token MCP inválido ou ausente"}, extra_headers={"WWW-Authenticate": "Bearer"})
                         return
+                    origin = self.headers.get("Origin", "")
+                    if origin and not path_ok:
+                        bind_host = str(self.server.server_address[0])
+                        parsed = urllib.parse.urlparse(origin)
+                        origin_host = (parsed.hostname or "").lower()
+                        if parsed.scheme != "http" or not _is_allowed_host(origin_host, bind_host) or parsed.port != self.server.server_port:
+                            self._send(403, {"error": "Origin não local rejeitado no endpoint MCP"})
+                            return
                 else:
                     self._validate_local()
-                if self.headers.get("Content-Type", "").split(";")[0].strip() != "application/json":
+                content_type = self.headers.get("Content-Type", "").split(";")[0].strip().lower()
+                if content_type != "application/json":
                     self._send(400, {"error": "Envie application/json"})
                     return
                 raw_length = self.headers.get("Content-Length")
@@ -236,7 +265,7 @@ def create_handler(lab: Lab, ollama_model: str = "", mcp_allow_writes: bool = Fa
             if not isinstance(data,dict):
                 raise ValueError("Corpo precisa ser um objeto JSON")
             path=urllib.parse.urlsplit(self.path).path
-            if path in ("/api/reference/note", "/api/reference/refresh", "/api/reference/review", "/api/reference/propose", "/api/reference/proposal/review", "/api/reference/transform", "/api/reference/git"):
+            if path in ("/api/reference/note", "/api/reference/refresh", "/api/reference/review", "/api/reference/propose", "/api/reference/proposal/review", "/api/reference/transform", "/api/reference/git", "/api/reference/dialogue", "/api/reference/move/rectify", "/api/reference/move/dispose", "/api/reference/proposal/check", "/api/reference/dialogue/active"):
                 operation = {
                     "/api/reference/note": "save_note",
                     "/api/reference/refresh": "refresh_reference",
@@ -245,6 +274,11 @@ def create_handler(lab: Lab, ollama_model: str = "", mcp_allow_writes: bool = Fa
                     "/api/reference/proposal/review": "review_proposal",
                     "/api/reference/transform": "transform_node",
                     "/api/reference/git": "git_checkpoint",
+                    "/api/reference/dialogue": "import_dialogue",
+                    "/api/reference/move/rectify": "rectify_move",
+                    "/api/reference/move/dispose": "dispose_move",
+                    "/api/reference/proposal/check": "check_proposal",
+                    "/api/reference/dialogue/active": "set_dialogue_active",
                 }[path]
                 result = execute(lab, operation, data, allow_writes=True)
             elif path == "/api/investigations":

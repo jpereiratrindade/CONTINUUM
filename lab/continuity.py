@@ -36,7 +36,9 @@ def schema(lab):
         );
     ''')
     from .proposals import schema as proposal_schema
+    from .transformations import schema as transformations_schema
     proposal_schema(lab)
+    transformations_schema(lab)
 
 
 def note(lab, ident):
@@ -200,12 +202,14 @@ def transformations(lab, ident):
 
 def transform_node(lab, source_id, kind, title, body='', relation='evolves_into', reason='', state='endorsed'):
     lab.node(source_id)
+    from .transformations import check_proposal_objections
+    prior_objections = check_proposal_objections(lab, source_id, f"{title} {body}")
     effective_reason = (reason or '').strip() or f'Desdobramento em {kind}: {title.strip()[:120]}'
     target = lab.create_node(kind, title, body)
     link = lab.add_link(source_id, target['id'], relation, effective_reason, state)
     refresh(lab, source_id)
     refresh(lab, target['id'])
-    return {'source_id': source_id, 'node': target, 'link': link}
+    return {'source_id': source_id, 'node': target, 'link': link, 'prior_objections': prior_objections}
 
 
 def reference(lab, ident):
@@ -223,9 +227,13 @@ def reference(lab, ident):
             feedback = {r['suggestion_id']: r['state'] for r in lab.db.execute(
                 'SELECT suggestion_id,state FROM contribution_feedback WHERE node_id=?', (ident,))}
             from .proposals import authorship, list_proposals
+            from .transformations import critical_trajectory
+            crit = critical_trajectory(lab, ident)
+            crit['context_counts']['documents'] = len(package['evidence']) if package else 0
             return {'node': node, 'note': working, 'package': package, 'package_event_id': row['event_id'] if row else None,
                     'authorship': authorship(lab, ident), 'proposals': list_proposals(lab, ident),
                     'transformations': transformations(lab, ident),
+                    'critical_trajectory': crit,
                     'stale': not row or row['basis_hash'] != basis(lab, node, working), 'feedback': feedback}
         finally:
             if owns_transaction:
@@ -264,6 +272,18 @@ def export_reference(lab, ident):
         for t in current['transformations']:
             arrow = '→' if t['direction'] == 'outgoing' else '←'
             lines.append(f"- {arrow} **{t['relation']}** ({t['state']}) · [{t['node']['kind']}] {t['node']['title']} (`{t['node']['id']}`) — {t['reason']}")
+    crit = current.get('critical_trajectory') or {}
+    if crit.get('chains'):
+        lines.extend(['', '## Reconstrução crítica de transformações (Plano B — Candidata)', ''])
+        for idx, ch in enumerate(crit['chains'], 1):
+            lines.append(f"### Cadeia {idx}")
+            lines.append(f"- **Proposta questionada:** {ch['questioned_proposal']['content']}")
+            lines.append(f"- **Objeção registrada:** {ch['what_was_objected']['content']}")
+            if ch.get('what_changed_after'):
+                lines.append(f"- **O que mudou depois (Reformulação):** {ch['what_changed_after']['content']}")
+            lines.append(f"- **Leitura alternativa:** {ch['what_was_objected']['alternative_reading']}")
+            lines.append(f"- **Dúvida remanescente:** {ch['remaining_doubt']}")
+            lines.append('')
     lines.extend(['', '## Fontes aproximadas', ''])
     for doc in package['evidence'] if package else []:
         lines.append(f"- {doc['title']} · snapshot `{doc['version_event_id']}` · SHA-256 `{doc['content_hash']}`")

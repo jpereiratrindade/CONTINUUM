@@ -60,7 +60,14 @@ class MCPServer:
                 name = params.get("name")
                 if not isinstance(name, str) or name not in OPERATIONS:
                     return error(-32602, "Unknown tool")
-                args = params.get("arguments", {})
+                raw_args = params.get("arguments")
+                if raw_args is None:
+                    args = {}
+                elif isinstance(raw_args, dict):
+                    _, _, required, _ = OPERATIONS[name]
+                    args = {k: v for k, v in raw_args.items() if not (v is None and k not in required)}
+                else:
+                    args = raw_args
                 try:
                     validate(name, args)
                 except ValueError as exc:
@@ -97,7 +104,10 @@ class MCPHTTPDispatcher:
                     self._sessions.pop(oldest, None)
                 server = MCPServer(self.lab, allow_writes=self.allow_writes, auto_ready=True)
                 self._sessions[sid] = server
-                return server.handle(message), sid
+                res = server.handle(message)
+                if server.client_name != "unknown":
+                    self._default.client_name = server.client_name
+                return res, sid
             server = self._sessions.get(session_id or "") or self._default
             return server.handle(message), session_id
 

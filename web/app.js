@@ -137,6 +137,48 @@ function renderProposals(data) {
   const reviewed=proposals.filter(p=>p.state!=="pending");
   $("#note-proposals").innerHTML=(pending.length?`<h3>${pending.length===1?"Uma proposta para examinar":pending.length+" propostas para examinar"}</h3>`:"")+pending.map(p=>`<details class="text-proposal"><summary title="${escapeHtml(p.source_ref)}">Proposta de ${escapeHtml(originLabel(p))}<small>Ainda não incorporada · ${escapeHtml(new Date(p.recorded_at).toLocaleString("pt-BR"))}</small></summary><p class="small muted">Se incorporar, este trecho será acrescentado ao final do texto preservado.</p><pre class="proposal-text">${escapeHtml(p.text)}</pre><div class="toolbar"><button class="subtle" data-accept-proposal="${escapeHtml(p.id)}" data-revision="${data.note.revision}">Incorporar ao final</button><button class="subtle" data-dismiss-proposal="${escapeHtml(p.id)}">Dispensar</button></div></details>`).join("")+(reviewed.length?`<details class="reviewed-proposals"><summary>Propostas examinadas (${reviewed.length})</summary>${reviewed.map(p=>`<details><summary>${p.state==="incorporated"?"Incorporada":"Dispensada"} · ${escapeHtml(originLabel(p))}</summary><pre class="proposal-text">${escapeHtml(p.text)}</pre></details>`).join("")}</details>`:"");
 }
+function spanLabel(refs) {
+  if(!refs||!refs.length)return "sem trecho ancorado";
+  const r=refs[0];
+  return `turno ${r.turn_id}[${r.span_start}:${r.span_end}] · hash ${(r.source_version_hash||"").slice(0,10)}`;
+}
+function renderCriticalTrajectory(data) {
+  const crit=data.critical_trajectory;
+  if(!crit)return;
+  const key=JSON.stringify(crit);
+  if(active.critKey===key)return;
+  active.critKey=key;
+  const counts=crit.context_counts||{};
+  if($("#reference-context-counts")){
+    $("#reference-context-counts").innerHTML=`<span>✓ Documentos (${counts.documents||0})</span><span>✓ Discussões (${counts.dialogues||0})</span><span>✓ Movimentos (${counts.moves||0}) · Transformações (${counts.transformations||0})</span>`;
+  }
+  const ribbon=crit.transformation_ribbon||[];
+  if($("#reference-ribbon")){
+    $("#reference-ribbon").innerHTML=ribbon.length?ribbon.map((step,idx)=>`<div class="ribbon-step" data-kind="${escapeHtml(step.kind)}"><strong>${idx+1}. ${escapeHtml(step.stage_label)}</strong><div>${escapeHtml(step.summary)}</div><div class="small muted">${escapeHtml(spanLabel(step.evidence_refs))}</div></div>`).join(""):'<p class="small muted">Importe um diálogo autorizado abaixo para reconstruir a cadeia de transformações (proposta → objeção → reformulação).</p>';
+  }
+  const chains=crit.chains||[];
+  if($("#reference-critical-chains")){
+    $("#reference-critical-chains").innerHTML=chains.map((ch,idx)=>`<div class="critical-chain">
+      <div class="small muted"><strong>Cadeia de transformação #${idx+1}</strong> · escopo <code>${escapeHtml(ch.scope)}</code></div>
+      <div class="chain-row"><strong>1. Qual proposta foi questionada?</strong><div>${escapeHtml(ch.questioned_proposal.content)}</div><small class="muted">Âncora: ${escapeHtml(spanLabel(ch.questioned_proposal.evidence_refs))}</small></div>
+      <div class="chain-row objection"><strong>2. O que foi objetado? (${escapeHtml(ch.what_was_objected.relation)})</strong><div>${escapeHtml(ch.what_was_objected.content)}</div><small class="muted">Âncora: ${escapeHtml(spanLabel(ch.what_was_objected.evidence_refs))} · <em>Leitura alternativa:</em> ${escapeHtml(ch.what_was_objected.alternative_reading)}</small>
+        <div class="disposition-bar">
+          <button class="subtle" type="button" data-dispose-target="${escapeHtml(ch.what_was_objected.id)}" data-dispose="useful">Útil</button>
+          <button class="subtle" type="button" data-dispose-target="${escapeHtml(ch.what_was_objected.id)}" data-dispose="not_relevant">Não pertinente</button>
+          <button class="subtle" type="button" data-dispose-target="${escapeHtml(ch.what_was_objected.id)}" data-dispose="incorrect_interpretation">Interpretação incorreta</button>
+          <button class="subtle" type="button" data-dispose-target="${escapeHtml(ch.what_was_objected.id)}" data-dispose="revisit_later">Revisitar depois</button>
+        </div>
+      </div>
+      ${ch.what_changed_after?`<div class="chain-row reformulation"><strong>3. O que mudou depois (Reformulação)?</strong><div>${escapeHtml(ch.what_changed_after.content)}</div><small class="muted">Âncora: ${escapeHtml(spanLabel(ch.what_changed_after.evidence_refs))} · <em>Leitura alternativa:</em> ${escapeHtml(ch.what_changed_after.alternative_reading)}</small></div>`:`<div class="chain-row"><small class="muted">3. Nenhuma reformulação subsequente vinculada ainda.</small></div>`}
+      <div class="chain-row doubt"><strong>4. Qual dúvida ou tensão permaneceu?</strong><div>${escapeHtml(ch.remaining_doubt)}</div></div>
+    </div>`).join("");
+  }
+  const contrib=crit.continuum_contributions||{};
+  const slots=[contrib.candidate_convergence,contrib.recurring_objection,contrib.tension_contradiction,contrib.next_movement].filter(Boolean);
+  if($("#reference-continuum-cards")){
+    $("#reference-continuum-cards").innerHTML=slots.length?slots.map(s=>`<div class="epistemic-card" data-slot="${escapeHtml(s.kind)}"><h4>${escapeHtml(s.label)} <span class="chip">${escapeHtml(s.state)}</span></h4><div>${escapeHtml(s.summary)}</div>${s.alternative_reading?`<div class="small muted"><em>Leitura alternativa:</em> ${escapeHtml(s.alternative_reading)}</div>`:""}${s.evidence_refs?.length?`<div class="small muted">Fonte: ${escapeHtml(spanLabel(s.evidence_refs))}</div>`:""}</div>`).join(""):"";
+  }
+}
 function renderTransformations(data) {
   const items=data.transformations || [];
   const key=JSON.stringify(items)+data.node.status+data.node.kind;
@@ -164,6 +206,7 @@ function renderReference(data) {
   $("#note-origin").title=last?.source_ref || "";
   $("#note-origin").textContent=last?`${last.kind==="working_note_saved"?"Última edição preservada":"Registro inicial"}: ${originLabel(last)} · ${new Date(last.recorded_at).toLocaleString("pt-BR")} · ${author.edits} ${author.edits===1?"edição registrada":"edições registradas"}${author.proposal?" · proposta de "+originLabel(author.proposal)+" incorporada":""}`:"Origem não informada";
   renderProposals(data);
+  renderCriticalTrajectory(data);
   renderTransformations(data);
   const p=data.package;
   $("#context-state").textContent=data.stale?"Atualização das referências pendente":"Referências aproximadas automaticamente";
@@ -241,6 +284,15 @@ async function actions(event){
  if(target.dataset.version){const doc=await request(`/api/document-version?id=${encodeURIComponent(target.dataset.version)}`);const host=target.closest("details").querySelector(".source-preview");host.replaceChildren();const pre=document.createElement("pre");pre.textContent=doc.body;host.append(pre);return;}
  if(!active)return;
  const session=active;
+ if(target.dataset.disposeTarget&&target.dataset.dispose){
+  target.disabled=true;
+  try{
+    await request("/api/reference/move/dispose",{id:session.id,target_id:target.dataset.disposeTarget,disposition:target.dataset.dispose,target_kind:"move"});
+    notify(`Disposição '${target.dataset.dispose}' registrada com escopo contextual.`);
+    await pollReference();
+  }finally{target.disabled=false;}
+  return;
+ }
  if(target.dataset.acceptProposal||target.dataset.dismissProposal){
   if(target.dataset.acceptProposal&&(session.dirty||session.inflight||session.conflict)){
     await saveNote(session);
@@ -286,8 +338,9 @@ async function init(){
  $$(".nav").forEach(btn=>btn.addEventListener("click",()=>show(btn.dataset.view)));
  $("#brand").addEventListener("click",event=>{event.preventDefault();show("explorar");});
  document.body.addEventListener("click",event=>actions(event).catch(ex=>notify(ex.message,true)));
+ onForm("#dialogue-form",async()=>{if(!active)return;await saveNote(active);const res=await request("/api/reference/dialogue",{id:active.id,conversation_id:$("#dialogue-conv-id").value,scope:$("#dialogue-scope").value,title:$("#dialogue-title").value,dialogue_text:$("#dialogue-text").value});$("#dialogue-text").value="";await pollReference();notify(res.idempotent_reuse?"Diálogo idêntico já importado (idempotente).":`Diálogo importado: ${res.moves.length} movimentos e ${res.transformations.length} transformações reconstruídas.`);});
  onForm("#revise-form",async()=>{if(!active)return;await saveNote(active);await request("/api/nodes/revise",{id:active.id,status:$("#revise-status").value,reason:$("#revise-reason").value});$("#revise-reason").value="";$(".revise-status-box").open=false;await pollReference();await loadNodes();notify("Estado do percurso revisado e preservado no histórico.");});
- onForm("#transform-form",async()=>{if(!active)return;await saveNote(active);const res=await request("/api/reference/transform",{source_id:active.id,kind:$("#transform-kind").value,relation:$("#transform-relation").value,title:$("#transform-title").value,body:$("#transform-body").value,reason:$("#transform-reason").value});$("#transform-form").reset();$(".transform-action-box").open=false;notify("Transformação registrada e vinculada.");await loadNodes();await openNode(res.node.id);});
+ onForm("#transform-form",async()=>{if(!active)return;await saveNote(active);const res=await request("/api/reference/transform",{source_id:active.id,kind:$("#transform-kind").value,relation:$("#transform-relation").value,title:$("#transform-title").value,body:$("#transform-body").value,reason:$("#transform-reason").value});$("#transform-form").reset();$(".transform-action-box").open=false;const warnCount=res.prior_objections?.warnings?.length||0;notify(warnCount?`Transformação registrada com ${warnCount} alerta(s) de objeção prévia neste escopo.`:"Transformação registrada e vinculada.");await loadNodes();await openNode(res.node.id);});
  onForm("#node-form",async()=>{const n=await request("/api/nodes",{kind:$("#node-kind").value,title:$("#node-title").value,body:$("#node-body").value});$("#node-form").reset();await loadNodes();await openNode(n.id);});
  onForm("#source-form",async()=>{await request("/api/sources",{label:$("#source-label").value,path:$("#source-path").value});await request("/api/scan",{});await renderSources();await pollReference();notify("Fonte observada. Contextos preparados.");});
  onForm("#link-form",async()=>{await request("/api/links",{source_id:$("#link-source").value,target_id:$("#link-target").value,relation:$("#link-relation").value,state:$("#link-state").value,reason:$("#link-reason").value});$("#link-form").reset();notify("Relação preservada.");});

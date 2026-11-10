@@ -57,3 +57,13 @@ A versão F0 só é considerada **apta a experimentação controlada** após tes
 ## 8. Tensão deliberada
 
 Automação sem fricção é desejável; autonomia epistêmica irrestrita não. O sistema pode observar e preparar, mas declarações de verdade, validação causal e decisões substantivas permanecem responsabilidades explícitas de pessoas ou de protocolos científicos verificáveis.
+
+---
+
+## 9. Revisão Versionada v0.2.0 (2026-11-10) — Transformações e Memória Reflexiva
+
+Sem revogar os invariantes `INV-01` a `INV-12` da versão `0.1.0`, esta revisão incorpora o aprendizado empírico do `CONT-EXP-003` e formaliza as diretrizes constituintes do `CONT-PLAN-001` e do `CONT-ADR-TRANSFORMACOES`:
+
+1. **Unidade Ampliada de Investigação:** Além de documentos, questões e artefatos, a **transformação intelectual investigável** (`proposta -> objeção -> reformulação -> tensão aberta`), ancorada em trechos verificáveis (`SourceSpan`), passa a constituir objeto central do laboratório.
+2. **Três Planos Distintos:** O sistema separa estritamente **Plano A** (registros originais observados/importados), **Plano B** (reconstruções interpretativas candidatas datadas com `interpreted_at`, método e versão) e **Plano C** (conhecimento de trabalho e disposições humanas).
+3. **Memória Crítica das Objeções:** Objeções e restrições registradas são preservadas como dados intelectuais de primeira ordem em seu escopo, prevenindo operacionalmente a repetição cega de soluções já contestadas (`INV-T01` a `INV-T15`).

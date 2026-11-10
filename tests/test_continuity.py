@@ -199,3 +199,144 @@ class ContinuityTests(unittest.TestCase):
         self.assertIn('+Desenvolvimento com hipótese vinculada.', g2['diff'])
         self.assertIn('evolves_into', Path(g2['path']).read_text(encoding='utf-8'))
         self.assertTrue(self.call('verify')['ok'])
+
+    def test_cont_plan_001_dialogue_transformations_and_invariants(self):
+        from lab.transformations import create_candidate_move, verify_evidence_refs
+
+        # INV-T09: Before any dialogue is imported, critical_trajectory returns 'sem evidência suficiente'
+        empty_crit = self.call('critical_trajectory', id=self.node['id'])
+        self.assertEqual(empty_crit['status_notice'], 'sem evidência suficiente')
+        self.assertEqual(empty_crit['chains'], [])
+
+        # INV-T11: Unauthorized scope is rejected
+        with self.assertRaises(PermissionError):
+            self.call(
+                'import_dialogue',
+                id=self.node['id'],
+                conversation_id='conv-unauthorized',
+                scope='public:unconsented',
+                dialogue_text='Usuário: Teste sem autorização.'
+            )
+
+        # Import Reference Case dialogue (Nov 9-10 LAC/CONTINUUM transformation journey)
+        transcript = (
+            "Usuário: Como organizar e conectar conhecimentos e percursos entre projetos distintos?\n"
+            "Assistente: Propomos criar uma interface centrada em commits Git, tabelas e reprodução de registros.\n"
+            "Usuário: Mas como está é como ler um texto em outra plataforma; commit é ferramenta e não fim, uma planilha melhorada é insuficiente.\n"
+            "Assistente: Precisamos deixar de pensar o laboratório como reprodução de registros e passar a reconstruir e investigar as transformações intelectuais e o papel histórico das objeções.\n"
+            "Usuário: Cuidado fundamental: a reconstrução exige distinguir evidência observada de interpretação candidata sem apagar incertezas.\n"
+            "Usuário: Qual experimento comprova se a memória das objeções evita repetir soluções já rejeitadas?"
+        )
+        imp1 = self.call(
+            'import_dialogue',
+            id=self.node['id'],
+            conversation_id='lac-continuum-2026-11-10',
+            scope='authorized:continuum-research',
+            title='Jornada de transformação 9-10 Nov 2026',
+            dialogue_text=transcript,
+        )
+        self.assertFalse(imp1['idempotent_reuse'])
+        self.assertEqual(imp1['turns_count'], 6)
+        self.assertGreaterEqual(len(imp1['moves']), 5)
+        self.assertGreaterEqual(len(imp1['transformations']), 2)
+
+        # INV-T05: Importing identical material again is idempotent (no duplicate turns/moves)
+        imp2 = self.call(
+            'import_dialogue',
+            id=self.node['id'],
+            conversation_id='lac-continuum-2026-11-10',
+            scope='authorized:continuum-research',
+            title='Jornada de transformação 9-10 Nov 2026',
+            dialogue_text=transcript,
+        )
+        self.assertTrue(imp2['idempotent_reuse'])
+        self.assertEqual(imp1['dialogue_id'], imp2['dialogue_id'])
+        self.assertEqual(len(imp1['moves']), len(imp2['moves']))
+
+        # INV-T01: Original dialogue and turns are immutable in SQLite
+        with self.assertRaises(Exception):
+            self.lab.db.execute("UPDATE dialogue_turns SET text='adulterado' WHERE dialogue_id=?", (imp1['dialogue_id'],))
+
+        # INV-T03: Turns without timestamp keep occurred_at=None (never faked with imported_at)
+        for m in imp1['moves']:
+            self.assertIn('interpreted_at', m)
+            self.assertEqual(m['interpretation']['pipeline_version'], '0.1.0')
+            for ref in m['evidence_refs']:
+                self.assertIsNone(ref['occurred_at'])
+                self.assertEqual(ref['source_version_hash'], imp1['version_hash'])
+
+        # INV-T02: Invalid span anchor is rejected; move without evidence_refs is marked ungrounded_hypothesis
+        with self.assertRaises(ValueError):
+            verify_evidence_refs(self.lab, [{
+                'source_id': imp1['dialogue_id'],
+                'turn_id': 't001',
+                'span_start': 0,
+                'span_end': 99999,
+            }])
+        ungrounded = create_candidate_move(
+            self.lab, self.node['id'], 'hypothesis' if 'hypothesis' in ('proposal',) else 'proposal',
+            'Proposta solta sem trecho de origem', evidence_refs=None
+        )
+        self.assertEqual(ungrounded['status'], 'ungrounded_hypothesis')
+
+        # Section 7.4 Functional Criterion: critical_trajectory answers the 4 traceable questions
+        crit = self.call('critical_trajectory', id=self.node['id'])
+        self.assertEqual(crit['status_notice'], 'reconstrução candidata disponível')
+        self.assertGreaterEqual(len(crit['chains']), 1)
+        chain = crit['chains'][0]
+        self.assertIn('commits Git', chain['questioned_proposal']['content'])
+        self.assertIn('ler um texto em outra plataforma', chain['what_was_objected']['content'])
+        self.assertIsNotNone(chain['what_changed_after'])
+        self.assertIn('transformações intelectuais', chain['what_changed_after']['content'])
+        self.assertTrue(len(chain['remaining_doubt']) > 10)
+        # INV-T14: Every transformation has an explicit alternative_reading
+        self.assertTrue(len(chain['what_was_objected']['alternative_reading']) > 10)
+        # INV-T02: Ungrounded move does not enter grounded moves/chains
+        self.assertEqual(len(crit['ungrounded_moves']), 1)
+        self.assertTrue(all(m['id'] != ungrounded['id'] for m in crit['moves']))
+
+        # Infographic experience: 4 'Contribuições do CONTINUUM' + 'Trajetória da transformação' ribbon
+        contrib = crit['continuum_contributions']
+        self.assertIsNotNone(contrib['candidate_convergence'])
+        self.assertIsNotNone(contrib['recurring_objection'])
+        self.assertIsNotNone(contrib['tension_contradiction'])
+        self.assertIsNotNone(contrib['next_movement'])
+        self.assertGreaterEqual(len(crit['transformation_ribbon']), 5)
+
+        # INV-T15: Operational objection memory warns when repeating an already-objected proposal in same scope
+        check = self.call(
+            'check_proposal',
+            id=self.node['id'],
+            proposal_text='Criar nova tela de tabelas e commits Git para reproduzir registros.'
+        )
+        self.assertTrue(check['has_prior_objections'])
+        self.assertIn('ler um texto em outra plataforma', check['warnings'][0]['objection']['content'])
+
+        # INV-T06 & Section 6.3: Rectify a move and record human disposition without erasing history
+        obj_id = chain['what_was_objected']['id']
+        rect = self.call(
+            'rectify_move',
+            move_id=obj_id,
+            kind='objection',
+            content='Objeção retificada: ler texto em outra plataforma e focar em commits não produz continuidade intelectual.',
+            reason='Tornar explícita a distinção entre interoperabilidade e continuidade intelectual'
+        )
+        self.assertEqual(rect['status'], 'rectified')
+        disp = self.call(
+            'dispose_move',
+            id=self.node['id'],
+            target_id=rect['new_move_id'],
+            disposition='useful',
+            comment='Objeção central do percurso'
+        )
+        self.assertEqual(disp['disposition'], 'useful')
+
+        # INV-T08: Pausing/revoking the dialogue removes its derived moves from active synthesis
+        self.call('set_dialogue_active', dialogue_id=imp1['dialogue_id'], active=False)
+        paused_crit = self.call('critical_trajectory', id=self.node['id'])
+        self.assertEqual(paused_crit['status_notice'], 'sem evidência suficiente')
+        self.call('set_dialogue_active', dialogue_id=imp1['dialogue_id'], active=True)
+        restored_crit = self.call('critical_trajectory', id=self.node['id'])
+        self.assertEqual(restored_crit['status_notice'], 'reconstrução candidata disponível')
+
+        self.assertTrue(self.call('verify')['ok'])

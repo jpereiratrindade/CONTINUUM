@@ -1,6 +1,7 @@
 """Shared, validated operations for HTTP and MCP clients."""
 from .core import VALID_KINDS, VALID_STATUSES, VALID_RELATIONS, VALID_LINK_STATES
 from .retrieval import discover, markdown_pack
+from .transformations import MOVE_KINDS, HUMAN_DISPOSITIONS
 
 
 def field(kind="string", **kw):
@@ -38,6 +39,12 @@ OPERATIONS = {
     "transform_node": ("Desdobrar percurso atual em novo elemento vinculado (ex.: questão -> hipótese/experimento).", {"source_id": field(), "kind": field(enum=sorted(VALID_KINDS)), "title": field(minLength=1, maxLength=240), "body": field(maxLength=20000), "relation": field(enum=sorted(VALID_RELATIONS)), "reason": field(maxLength=2000), "state": field(enum=sorted(VALID_LINK_STATES))}, ["source_id", "kind", "title"], True),
     "git_history": ("Consultar commits e diff do percurso versionado no Git do workspace.", {"id": field()}, ["id"], False),
     "git_checkpoint": ("Materializar e versionar estado atual do percurso em commit Git no workspace.", {"id": field(), "message": field(maxLength=240)}, ["id"], True),
+    "import_dialogue": ("Importar conversa autorizada com preservação de turnos e extrair cadeia candidata proposta -> objeção -> reformulação.", {"id": field(), "conversation_id": field(minLength=1, maxLength=200), "scope": field(minLength=11, maxLength=200), "title": field(maxLength=240), "dialogue_text": field(minLength=1, maxLength=60000), "turns": field("array"), "auto_extract": field("boolean")}, ["id", "conversation_id"], True),
+    "critical_trajectory": ("Reconstruir trajetória crítica: propostas questionadas, objeções, reformulações, dúvidas abertas e contribuições do CONTINUUM.", {"id": field()}, ["id"], False),
+    "rectify_move": ("Retificar movimento interpretativo candidato sem alterar o registro original (INV-T06).", {"move_id": field(), "kind": field(enum=sorted(MOVE_KINDS)), "content": field(minLength=1, maxLength=4000), "reason": field(minLength=1, maxLength=2000)}, ["move_id", "reason"], True),
+    "dispose_move": ("Registrar resposta humana contextual (useful, not_relevant, incorrect_interpretation, revisit_later) sobre movimento ou cartão.", {"id": field(), "target_id": field(), "disposition": field(enum=sorted(HUMAN_DISPOSITIONS)), "comment": field(maxLength=1000), "target_kind": field(enum=["move", "transformation", "card"])}, ["id", "target_id", "disposition"], True),
+    "check_proposal": ("Verificar se uma proposta reincide em objeções já registradas no mesmo escopo (INV-T15).", {"id": field(), "proposal_text": field(minLength=1, maxLength=4000)}, ["id", "proposal_text"], False),
+    "set_dialogue_active": ("Pausar/revogar ou reativar diálogo importado preservando custódia (INV-T08).", {"dialogue_id": field(), "active": field("boolean")}, ["dialogue_id", "active"], True),
 }
 
 
@@ -57,7 +64,7 @@ def validate(name, args):
     for key, value in args.items():
         spec = props[key]
         valid = {"string": lambda: isinstance(value, str), "integer": lambda: type(value) is int,
-                 "boolean": lambda: type(value) is bool}[spec["type"]]()
+                 "boolean": lambda: type(value) is bool, "array": lambda: isinstance(value, list)}[spec["type"]]()
         if not valid:
             raise ValueError(f"Tipo inválido: {key}")
         if "enum" in spec and value not in spec["enum"]:
@@ -88,6 +95,44 @@ def _execute(lab, name, args, *, allow_writes=False):
             return git_history(lab, args["id"])
         if name == "git_checkpoint":
             return git_checkpoint(lab, args["id"], args.get("message", ""))
+        from .transformations import (
+            import_dialogue, critical_trajectory, rectify_move, dispose_move,
+            check_proposal_objections, set_dialogue_active,
+        )
+        if name == "import_dialogue":
+            return import_dialogue(
+                lab,
+                args["id"],
+                args["conversation_id"],
+                scope=args.get("scope", "authorized:continuum-research"),
+                title=args.get("title", ""),
+                turns=args.get("turns"),
+                dialogue_text=args.get("dialogue_text"),
+                auto_extract=args.get("auto_extract", True),
+            )
+        if name == "critical_trajectory":
+            return critical_trajectory(lab, args["id"])
+        if name == "rectify_move":
+            return rectify_move(
+                lab,
+                args["move_id"],
+                new_kind=args.get("kind"),
+                new_content=args.get("content"),
+                reason=args["reason"],
+            )
+        if name == "dispose_move":
+            return dispose_move(
+                lab,
+                args["id"],
+                args["target_id"],
+                args["disposition"],
+                comment=args.get("comment", ""),
+                target_kind=args.get("target_kind", "move"),
+            )
+        if name == "check_proposal":
+            return check_proposal_objections(lab, args["id"], args["proposal_text"])
+        if name == "set_dialogue_active":
+            return set_dialogue_active(lab, args["dialogue_id"], args["active"])
         if name == "export_reference":
             return export_reference(lab, args["id"])
         if name == "reference":

@@ -92,6 +92,7 @@
           <div id="reference-workspace" class="reference-layout hidden">
             <article class="writing-paper">
               <div class="reference-heading"><span id="reference-badge" class="chip"></span><h2 id="reference-title"></h2><span id="note-status" class="save-status" role="status"></span></div>
+              <div id="reference-context-counts" class="context-counts small muted"></div>
               <div class="note-origin small muted"><span id="note-origin"></span> <button id="show-changes" class="linklike">Ver alterações</button> <button id="show-proposals" class="linklike hidden"></button></div>
               <label for="working-text" class="sr-only">Texto em desenvolvimento</label>
               <textarea id="working-text" maxlength="20000" placeholder="Continue aqui. Uma associação, um esboço, um caminho a experimentar…"></textarea>
@@ -105,9 +106,11 @@
                 <button id="git-checkpoint" class="subtle" type="button">Versionar no Git</button>
                 <span id="git-status" class="small muted"></span>
               </div>
-              <section class="workspace-transformations" aria-label="Transformações do percurso">
+              <section class="workspace-transformations" aria-label="Trajetória da transformação">
                 <div class="transformations-header">
-                  <h3>Transformações e desdobramentos</h3>
+                  <div>
+                    <h3>Trajetória da transformação <small class="muted">(transformações, não apenas estados)</small></h3>
+                  </div>
                   <details class="revise-status-box">
                     <summary class="linklike">Revisar estado</summary>
                     <form id="revise-form" class="inline-transform-form">
@@ -126,7 +129,30 @@
                     </form>
                   </details>
                 </div>
+                <div id="reference-ribbon" class="transformation-ribbon"></div>
+                <div id="reference-critical-chains" class="critical-chains"></div>
                 <div id="reference-transformations"></div>
+                <div id="objection-alert" class="notice hidden" role="alert"></div>
+                <details class="transform-action-box">
+                  <summary class="subtle">+ Importar diálogo autorizado (reconstruir proposta → objeção → reformulação)</summary>
+                  <form id="dialogue-form" class="stack transform-form">
+                    <div class="link-form">
+                      <label>Identificador da conversa
+                        <input id="dialogue-conv-id" required maxlength="200" placeholder="ex.: sessao-2026-11-10-continuum">
+                      </label>
+                      <label>Escopo autorizado (INV-T11)
+                        <input id="dialogue-scope" required maxlength="200" value="authorized:continuum-research">
+                      </label>
+                    </div>
+                    <label for="dialogue-title">Título / contexto do diálogo (opcional)</label>
+                    <input id="dialogue-title" maxlength="240" placeholder="Discussão sobre continuidade intelectual e objeções…">
+                    <label for="dialogue-text">Transcrição do diálogo (prefixe turnos com "Usuário:" e "Assistente:" ou separe por parágrafos)</label>
+                    <textarea id="dialogue-text" rows="5" maxlength="60000" required placeholder="Usuário: Criamos uma interface para listar commits e tabelas.&#10;Assistente: Podemos expor isso via MCP.&#10;Usuário: Mas como está é como ler um texto em outra plataforma; commit é ferramenta e não fim.&#10;Assistente: Então precisamos reformular: deixar de apenas recuperar registros e reconstruir as transformações intelectuais e objeções."></textarea>
+                    <div class="toolbar">
+                      <button class="primary" type="submit">Importar diálogo e reconstruir transformações</button>
+                    </div>
+                  </form>
+                </details>
                 <details class="transform-action-box">
                   <summary class="subtle">+ Desdobrar em hipótese, ideia, decisão ou experimento</summary>
                   <form id="transform-form" class="stack transform-form">
@@ -168,7 +194,8 @@
               <section id="note-proposals" aria-label="Propostas para este texto"></section>
             </article>
             <aside class="context-panel" aria-label="Contexto para continuar">
-              <div class="context-heading"><h2>Ao redor desta ideia</h2><span id="context-state" class="small muted"></span></div>
+              <div class="context-heading"><h2>Contribuições do CONTINUUM</h2><span id="context-state" class="small muted"></span></div>
+              <div id="reference-continuum-cards" class="continuum-cards"></div>
               <div id="reference-next"></div>
               <div id="reference-contributions"></div>
               <details class="context-details"><summary>Outras aproximações</summary><div id="reference-related"></div><div id="reference-connections"></div></details>
