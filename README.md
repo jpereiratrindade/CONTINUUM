@@ -112,6 +112,8 @@ docs/
 
 ## Licença e responsabilidade
 
-Código de bancada disponibilizado aqui para pesquisa e avaliação técnica. Antes de distribuição externa, definir licenciamento institucional, política de privacidade, backup e modelo de ameaças. **Não inserir dados sensíveis** sem revisão específica dos controles de acesso e da retenção histórica.
+CONTINUUM é disponibilizado sob a **GNU General Public License v3.0** (`GPL-3.0-only`). Consulte o texto completo em [LICENSE](LICENSE).
+
+O sistema permanece experimental. **Não inserir dados sensíveis** sem revisão específica dos controles de acesso e da retenção histórica.
 
 Para os critérios de aceitação, falhas conhecidas e próximas decisões, ver os documentos versionados em `docs/`.
