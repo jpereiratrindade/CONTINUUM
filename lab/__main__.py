@@ -13,9 +13,12 @@ def main():
     p.add_argument("--workspace", default=None, help="Diretório dedicado aos roteiros gerados")
     commands = p.add_subparsers(dest="command",required=True)
     server = commands.add_parser("serve")
+    server.add_argument("--host","--bind",dest="host",default="127.0.0.1",help="Endereço de escuta (127.0.0.1 ou 0.0.0.0)")
     server.add_argument("--port",type=int,default=8767)
     server.add_argument("--scan-every",type=int,default=180)
     server.add_argument("--ollama-model",default="",help="LLM local opcional; mantém saídas hipotéticas")
+    server.add_argument("--mcp-allow-writes",action="store_true",help="Permitir ferramentas de escrita no endpoint HTTP /mcp")
+    server.add_argument("--mcp-token",default="",help="Token Bearer para autenticar o endpoint HTTP /mcp (ou via LAB_MCP_TOKEN)")
     mcp = commands.add_parser("mcp", help="Servidor MCP stdio (somente leitura por padrão)")
     mcp.add_argument("--allow-writes", action="store_true", help="Habilitar ferramentas de escrita")
     register = commands.add_parser("register")
@@ -33,12 +36,13 @@ def main():
         if args.command == "serve":
             from .server import serve
             try:
-                serve(lab,port=args.port,scan_every=args.scan_every,ollama_model=args.ollama_model)
+                serve(lab,host=args.host,port=args.port,scan_every=args.scan_every,ollama_model=args.ollama_model,
+                      mcp_allow_writes=args.mcp_allow_writes,mcp_token=args.mcp_token)
             except OSError as exc:
                 if exc.errno != errno.EADDRINUSE:
                     raise
                 p.exit(2, f"A porta {args.port} já está em uso. "
-                       f"Se o CONTINUUM já estiver aberto, acesse http://127.0.0.1:{args.port}. "
+                       f"Se o CONTINUUM já estiver aberto, acesse http://{args.host}:{args.port}. "
                        "Para iniciar esta instância, encerre o processo que ocupa a porta "
                        "ou escolha outra com --port.\n")
             except KeyboardInterrupt:

@@ -1,8 +1,11 @@
 """Local-only interface, explicit write intent and bounded optional Ollama adapter."""
 from __future__ import annotations
 
+import hmac
+import ipaddress
 import json
 import os
+import socket
 import threading
 import urllib.error
 import urllib.parse
@@ -14,6 +17,7 @@ from pathlib import Path
 from . import __version__
 from .api import catalog, execute
 from .core import Lab, utcnow, provenance
+from .mcp import MCPHTTPDispatcher, MAX_LINE
 from .retrieval import discover, markdown_pack
 
 WEBROOT = (Path(__file__).resolve().parent.parent / "web").resolve()
@@ -53,25 +57,46 @@ def local_llm(model: str, evidence: dict) -> dict:
             "model":model,"source_ids":[d["id"] for d in evidence["documents"][:6]]}
 
 
-def create_handler(lab: Lab, ollama_model: str = ""):
+def _is_allowed_host(hostname: str, bind_host: str) -> bool:
+    if hostname in ("127.0.0.1", "localhost", "::1"):
+        return True
+    if bind_host in ("127.0.0.1", "localhost", "::1"):
+        return False
+    local_hostname = socket.gethostname().lower()
+    if hostname in (local_hostname, f"{local_hostname}.local", bind_host.lower()):
+        return True
+    try:
+        addr = ipaddress.ip_address(hostname)
+        return addr.is_loopback or addr.is_private or addr.is_link_local
+    except ValueError:
+        return False
+
+
+def create_handler(lab: Lab, ollama_model: str = "", mcp_allow_writes: bool = False, mcp_token: str = ""):
+    mcp_dispatcher = MCPHTTPDispatcher(lab, allow_writes=mcp_allow_writes)
+    effective_token = mcp_token or os.environ.get("LAB_MCP_TOKEN", "")
+
     class Handler(BaseHTTPRequestHandler):
         server_version = "ContinuumLab/" + __version__
 
         def _validate_local(self):
+            bind_host = str(self.server.server_address[0])
             host = self.headers.get("Host", "")
-            hostname = host.split(":")[0].lower()
-            if hostname not in ("127.0.0.1", "localhost"):
+            hostname = urllib.parse.urlsplit(f"//{host}").hostname or ""
+            hostname = hostname.lower()
+            if not _is_allowed_host(hostname, bind_host):
                 raise PermissionError("Host não local rejeitado")
             origin = self.headers.get("Origin", "")
             if origin:
                 parsed=urllib.parse.urlparse(origin)
-                if parsed.scheme != "http" or parsed.hostname not in ("127.0.0.1","localhost"):
+                origin_host = (parsed.hostname or "").lower()
+                if parsed.scheme != "http" or not _is_allowed_host(origin_host, bind_host):
                     raise PermissionError("Origin não local rejeitado")
                 if parsed.port != self.server.server_port:
                     raise PermissionError("Origin de porta diferente rejeitada")
 
         def _send(self, code: int, obj, content_type="application/json; charset=utf-8",
-                  attachment: str | None = None):
+                  attachment: str | None = None, extra_headers: dict[str, str] | None = None):
             body = (json.dumps(obj,ensure_ascii=False).encode("utf-8")
                     if content_type.startswith("application/json") else obj)
             self.send_response(code)
@@ -84,6 +109,9 @@ def create_handler(lab: Lab, ollama_model: str = ""):
             self.send_header("Content-Security-Policy","default-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'")
             if attachment:
                 self.send_header("Content-Disposition",f'attachment; filename="{attachment}"')
+            if extra_headers:
+                for k, v in extra_headers.items():
+                    self.send_header(k, v)
             self.end_headers()
             self.wfile.write(body)
 
@@ -139,11 +167,60 @@ def create_handler(lab: Lab, ollama_model: str = ""):
             elif path == "/api/export":
                 pack=markdown_pack(discover(lab,arg("q"))).encode("utf-8")
                 self._send(200,pack,"text/markdown; charset=utf-8","roteiro-continuidade.md")
+            elif path == "/mcp":
+                self._send(405,{"error":"Use POST /mcp para JSON-RPC MCP Streamable HTTP"},extra_headers={"Allow":"POST"})
             else:
                 self._send(404,{"error":"Rota não encontrada"})
 
         def do_POST(self):
+            if urllib.parse.urlsplit(self.path).path == "/mcp":
+                self._post_mcp()
+                return
             self._dispatch(self._post)
+
+        def _post_mcp(self):
+            try:
+                origin = self.headers.get("Origin", "")
+                if origin:
+                    bind_host = str(self.server.server_address[0])
+                    parsed = urllib.parse.urlparse(origin)
+                    origin_host = (parsed.hostname or "").lower()
+                    if parsed.scheme != "http" or not _is_allowed_host(origin_host, bind_host) or parsed.port != self.server.server_port:
+                        self._send(403, {"error": "Origin não local rejeitado no endpoint MCP"})
+                        return
+                if effective_token:
+                    auth = self.headers.get("Authorization", "")
+                    expected = f"Bearer {effective_token}"
+                    if not hmac.compare_digest(auth.encode("utf-8"), expected.encode("utf-8")):
+                        self._send(401, {"error": "Token MCP inválido ou ausente"}, extra_headers={"WWW-Authenticate": "Bearer"})
+                        return
+                else:
+                    self._validate_local()
+                if self.headers.get("Content-Type", "").split(";")[0].strip() != "application/json":
+                    self._send(400, {"error": "Envie application/json"})
+                    return
+                raw_length = self.headers.get("Content-Length")
+                if raw_length is None or not raw_length.isdecimal() or int(raw_length) > MAX_LINE:
+                    self._send(400, {"error": "Corpo ausente ou excede limite de 1 MiB"})
+                    return
+                raw_body = self.rfile.read(int(raw_length))
+                try:
+                    message = json.loads(raw_body.decode("utf-8"))
+                except (ValueError, UnicodeDecodeError):
+                    self._send(200, {"jsonrpc": "2.0", "id": None, "error": {"code": -32700, "message": "Parse error"}})
+                    return
+                session_id = self.headers.get("Mcp-Session-Id")
+                response, sid = mcp_dispatcher.dispatch(message, session_id=session_id)
+                headers = {"Mcp-Session-Id": sid} if sid else None
+                if response is None:
+                    self._send(202, b"", "text/plain; charset=utf-8", extra_headers=headers)
+                else:
+                    self._send(200, response, extra_headers=headers)
+            except PermissionError as ex:
+                self._send(403, {"error": str(ex)})
+            except Exception:
+                self._send(500, {"error": "Erro interno MCP; consulte o log local"})
+                raise
 
         def _post(self):
             if self.headers.get("X-Lab-Intent") != "user":
@@ -206,12 +283,13 @@ def create_handler(lab: Lab, ollama_model: str = ""):
     return Handler
 
 
-def serve(lab: Lab, port: int = 8767, scan_every: int = 180, ollama_model: str = ""):
+def serve(lab: Lab, port: int = 8767, scan_every: int = 180, ollama_model: str = "", host: str = "127.0.0.1",
+          mcp_allow_writes: bool = False, mcp_token: str = ""):
     if not 1 <= port <= 65535:
         raise ValueError("Porta inválida")
     if scan_every < 0:
         raise ValueError("Intervalo de observação inválido")
-    server=ThreadingHTTPServer(("127.0.0.1",port),create_handler(lab,ollama_model))
+    server=ThreadingHTTPServer((host,port),create_handler(lab,ollama_model,mcp_allow_writes=mcp_allow_writes,mcp_token=mcp_token))
     stop=threading.Event()
     def scan_loop():
         try:
@@ -227,7 +305,8 @@ def serve(lab: Lab, port: int = 8767, scan_every: int = 180, ollama_model: str =
             print(f"[observação] fatal: {ex}",flush=True)
     observer=threading.Thread(target=scan_loop,daemon=True)
     observer.start()
-    print(f"Laboratório experimental em http://127.0.0.1:{port} — apenas local",flush=True)
+    scope = "apenas local" if host in ("127.0.0.1", "localhost", "::1") else "rede local habilitada"
+    print(f"Laboratório experimental em http://{host}:{port} — {scope}",flush=True)
     try:
         server.serve_forever()
     finally:

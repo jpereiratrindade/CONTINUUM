@@ -5,6 +5,16 @@ const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, c => ({"&":"
 const QUESTION_KEY = "continuum.question.v1";
 let questionState = {draft: "", submitted: null};
 let allNodes = [], nextOffset = null, active = null, opening = 0, asking = false;
+function uuid() {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  const b = new Uint8Array(16);
+  if (typeof crypto !== "undefined" && typeof crypto.getRandomValues === "function") crypto.getRandomValues(b);
+  else for (let i = 0; i < 16; i++) b[i] = Math.floor(Math.random() * 256);
+  b[6] = (b[6] & 0x0f) | 0x40;
+  b[8] = (b[8] & 0x3f) | 0x80;
+  const h = Array.from(b, x => x.toString(16).padStart(2, "0")).join("");
+  return `${h.slice(0,8)}-${h.slice(8,12)}-${h.slice(12,16)}-${h.slice(16,20)}-${h.slice(20)}`;
+}
 
 async function request(path, body) {
   const config = body === undefined ? {} : {method:"POST", headers:{"Content-Type":"application/json","X-Lab-Intent":"user"},body:JSON.stringify(body)};
@@ -157,7 +167,7 @@ async function pollReference() {
 async function ask(event) {
   event.preventDefault();if(asking)return;
   const query=$("#query").value.trim();if(!query)return;
-  if(!questionState.submitted||questionState.submitted.query!==query)questionState.submitted={query,request_id:crypto.randomUUID()};
+  if(!questionState.submitted||questionState.submitted.query!==query)questionState.submitted={query,request_id:uuid()};
   questionState.draft=$("#query").value;store(QUESTION_KEY,questionState);
   asking=true;$("#search-form button[type=submit]").disabled=true;
   try {
