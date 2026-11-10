@@ -157,8 +157,8 @@ def create_handler(lab: Lab, ollama_model: str = ""):
             if not isinstance(data,dict):
                 raise ValueError("Corpo precisa ser um objeto JSON")
             path=urllib.parse.urlsplit(self.path).path
-            if path in ("/api/reference/note", "/api/reference/refresh", "/api/reference/review"):
-                operation = {"/api/reference/note": "save_note", "/api/reference/refresh": "refresh_reference", "/api/reference/review": "review_contribution"}[path]
+            if path in ("/api/reference/note", "/api/reference/refresh", "/api/reference/review", "/api/reference/propose", "/api/reference/proposal/review"):
+                operation = {"/api/reference/note": "save_note", "/api/reference/refresh": "refresh_reference", "/api/reference/review": "review_contribution", "/api/reference/propose": "propose_note", "/api/reference/proposal/review": "review_proposal"}[path]
                 result = execute(lab, operation, data, allow_writes=True)
             elif path == "/api/investigations":
                 result = execute(lab, "investigate", data, allow_writes=True)

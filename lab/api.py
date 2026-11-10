@@ -9,6 +9,8 @@ def field(kind="string", **kw):
 
 # name: (description, properties, required, mutates)
 OPERATIONS = {
+    "propose_note": ("Propor trecho adicional sem alterar o texto de trabalho. Use para contribuições do assistente; o usuário examina e incorpora no navegador. Repetir request_id não duplica.", {"id": field(), "text": field(minLength=1, maxLength=20000), "revision": field("integer", minimum=0), "request_id": field(minLength=36, maxLength=36)}, ["id", "text", "revision", "request_id"], True),
+    "review_proposal": ("Incorporar ao final do texto ou dispensar proposta; revisão exclusiva pelo navegador.", {"id": field(), "proposal_id": field(), "state": field(enum=["incorporated", "dismissed"]), "revision": field("integer", minimum=0)}, ["id", "proposal_id", "state", "revision"], True),
     "export_reference": ("Exportar texto em desenvolvimento e referências versionadas em Markdown, sem gravar arquivo.", {"id": field()}, ["id"], False),
     "reference": ("Retomar espaço compartilhado: intenção, texto de trabalho, evidências versionadas e contribuições. Não escreve.", {"id": field()}, ["id"], False),
     "save_note": ("Preservar texto de trabalho com controle de revisão; não altera a formulação original.", {"id": field(), "text": field(maxLength=20000), "revision": field("integer", minimum=0)}, ["id", "text", "revision"], True),
@@ -40,7 +42,7 @@ def catalog(allow_writes=False):
     return [{"name": name, "description": desc,
              "inputSchema": {"type": "object", "properties": props, "required": required, "additionalProperties": False},
              "annotations": {"readOnlyHint": not write, "destructiveHint": False, "openWorldHint": False}}
-            for name, (desc, props, required, write) in OPERATIONS.items() if allow_writes or not write]
+            for name, (desc, props, required, write) in OPERATIONS.items() if name != 'review_proposal' and (allow_writes or not write)]
 
 
 def validate(name, args):
@@ -68,6 +70,12 @@ def _execute(lab, name, args, *, allow_writes=False):
     if OPERATIONS[name][3] and not allow_writes:
         raise PermissionError("Escrita MCP desabilitada; inicie com --allow-writes")
     with lab.lock:
+        if name == "propose_note":
+            from .proposals import propose
+            return propose(lab, args['id'], args['text'], args['revision'], args['request_id'])
+        if name == "review_proposal":
+            from .proposals import review
+            return review(lab, args['id'], args['proposal_id'], args['state'], args['revision'])
         from .continuity import reference, save_note, refresh, feedback, export_reference
         if name == "export_reference":
             return export_reference(lab, args["id"])

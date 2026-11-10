@@ -244,6 +244,9 @@ class Lab:
             for row in self.db.execute("SELECT p.event_id,p.payload,e.payload AS recorded FROM continuity_packages p JOIN events e ON e.event_id=p.event_id"):
                 if row["payload"] != row["recorded"]:
                     return {"ok": False, "checked": count, "error": "continuity_package_mismatch", "event_id": row["event_id"]}
+            from .proposals import verify_projection
+            if not verify_projection(self):
+                return {"ok": False, "checked": count, "error": "note_proposal_mismatch"}
             return {"ok": True, "checked": count, "snapshots_checked": len(rows), "head": previous}
 
     def anchor(self) -> dict:

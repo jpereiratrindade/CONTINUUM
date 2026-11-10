@@ -1,6 +1,6 @@
 # CONTINUUM — Laboratório Experimental de Continuidade Intelectual
 
-**Versão:** 0.3.0 · **Estado:** bancada experimental · **Origem:** revisão crítica do LAC, sem substituí-lo.
+**Versão:** 0.4.0 · **Estado:** bancada experimental · **Origem:** revisão crítica do LAC, sem substituí-lo.
 
 > **Questão orientadora:** como sustentar a continuidade do trabalho intelectual entre documentos, ideias, decisões, instrumentos e projetos, preservando evidência, temporalidade, incompletude e capacidade de revisão?
 >
@@ -26,7 +26,8 @@ Abrir `http://127.0.0.1:8767`. O projeto usa apenas a biblioteca-padrão Python,
 1. Em **Fontes observadas**, autorize uma pasta de trabalho. O observador lê `.md`, `.markdown`, `.tex` e `.txt` sem modificar os originais.
 2. Em **Continuar**, comece com uma ideia, pergunta ou fragmento. Desenvolva o texto no mesmo espaço; ele é preservado automaticamente.
 3. Abra as contribuições em **Ao redor desta ideia** quando forem úteis. Você pode ler a versão completa da fonte, trazer um trecho para o texto ou dispensá-lo.
-4. Feche e retorne: o percurso e seu texto permanecem disponíveis. MCP e navegador compartilham a mesma referência.
+4. A origem da última edição aparece junto ao texto. Propostas de assistentes ficam separadas: examine o trecho e escolha **Incorporar ao final** ou **Dispensar**. **Ver alterações** permite comparar o texto anterior e o posterior.
+5. Feche e retorne: o percurso e seu texto permanecem disponíveis. MCP e navegador compartilham a mesma referência.
 
 A observação periódica (180 segundos por padrão) prepara novos contextos quando as fontes mudam. Cada referência aponta para um snapshot preservado. Contribuições são aproximações lexicais candidatas; não são interpretações verificadas. [Experimento de convergência e automação](docs/06-CONVERGENCIA.md).
 
@@ -40,7 +41,9 @@ python3 -m lab --db ./data/continuum.sqlite mcp
 python3 -m lab --db ./data/continuum.sqlite mcp --allow-writes
 ```
 
-Ferramentas `reference`, `save_note`, `refresh_reference`, `review_contribution`, `document_version` e `export_reference` complementam as operações existentes. O texto de trabalho usa revisão explícita para impedir sobrescrita silenciosa entre clientes. Consulte [configuração e contratos](docs/04-API-MCP.md).
+Para contribuições do assistente, use `propose_note`: ela preserva uma proposta sem alterar seu texto. `save_note` continua disponível para edições diretas solicitadas pelo usuário. A incorporação de propostas acontece no navegador.
+
+Ferramentas `reference`, `propose_note`, `save_note`, `refresh_reference`, `review_contribution`, `document_version` e `export_reference` complementam as operações existentes. O texto de trabalho usa revisão explícita para impedir sobrescrita silenciosa entre clientes. Consulte [configuração e contratos](docs/04-API-MCP.md).
 
 A interface compartilha a [identidade visual do LAC](docs/05-IDENTIDADE-VISUAL.md). A versão atual não lê automaticamente conversas de ChatGPT, e-mail, Word ou PDF; integrações futuras devem utilizar o espaço de referência por API/MCP e fontes autorizadas.
 

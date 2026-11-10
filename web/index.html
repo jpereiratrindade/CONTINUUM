@@ -92,6 +92,7 @@
           <div id="reference-workspace" class="reference-layout hidden">
             <article class="writing-paper">
               <div class="reference-heading"><h2 id="reference-title"></h2><span id="note-status" class="save-status" role="status"></span></div>
+              <div class="note-origin small muted"><span id="note-origin"></span> <button id="show-changes" class="linklike">Ver alterações</button> <button id="show-proposals" class="linklike hidden"></button></div>
               <label for="working-text" class="sr-only">Texto em desenvolvimento</label>
               <textarea id="working-text" maxlength="20000" placeholder="Continue aqui. Uma associação, um esboço, um caminho a experimentar…"></textarea>
               <div id="note-conflict" class="notice hidden" role="alert">
@@ -100,7 +101,8 @@
                 <div class="toolbar"><button id="resolve-note" class="subtle" type="button">Salvar meu texto como nova versão</button><button id="use-remote-note" class="subtle" type="button">Usar versão compartilhada</button></div>
               </div>
               <button id="export-work" class="linklike" type="button">Exportar texto · MD</button>
-              <details class="workspace-history"><summary>Ver percurso</summary><div id="reference-history"></div></details>
+              <details class="workspace-history"><summary>Alterações e percurso</summary><div id="reference-history"></div></details>
+              <section id="note-proposals" aria-label="Propostas para este texto"></section>
             </article>
             <aside class="context-panel" aria-label="Contexto para continuar">
               <div class="context-heading"><h2>Ao redor desta ideia</h2><span id="context-state" class="small muted"></span></div>

@@ -101,10 +101,35 @@ async function openNode(id) {
   if(session.dirty&&!session.conflict)queueSave(session);
   await loadNodes();
 }
+function originLabel(origin) {
+  if(!origin)return "Origem não informada";
+  if(origin.source_type==="mcp_client"){
+    const client=origin.source_ref.replace(/^mcp:/,"");
+    return /codex/i.test(client)?"Codex, via MCP":`${client}, via MCP`;
+  }
+  if(origin.source_ref==="browser-or-http-client")return "Navegador / API";
+  return origin.source_ref || "Origem não informada";
+}
+function renderProposals(data) {
+  const proposals=data.proposals || [];
+  const key=JSON.stringify(proposals)+data.note.revision;
+  if(active.proposalKey===key)return;
+  active.proposalKey=key;
+  const pending=proposals.filter(p=>p.state==="pending");
+  $("#show-proposals").classList.toggle("hidden",!pending.length);
+  $("#show-proposals").textContent=pending.length===1?"Uma proposta para examinar":`${pending.length} propostas para examinar`;
+  const reviewed=proposals.filter(p=>p.state!=="pending");
+  $("#note-proposals").innerHTML=(pending.length?`<h3>${pending.length===1?"Uma proposta para examinar":pending.length+" propostas para examinar"}</h3>`:"")+pending.map(p=>`<details class="text-proposal"><summary title="${escapeHtml(p.source_ref)}">Proposta de ${escapeHtml(originLabel(p))}<small>Ainda não incorporada · ${escapeHtml(new Date(p.recorded_at).toLocaleString("pt-BR"))}</small></summary><p class="small muted">Se incorporar, este trecho será acrescentado ao final do texto preservado.</p><pre class="proposal-text">${escapeHtml(p.text)}</pre><div class="toolbar"><button class="subtle" data-accept-proposal="${escapeHtml(p.id)}" data-revision="${data.note.revision}">Incorporar ao final</button><button class="subtle" data-dismiss-proposal="${escapeHtml(p.id)}">Dispensar</button></div></details>`).join("")+(reviewed.length?`<details class="reviewed-proposals"><summary>Propostas examinadas (${reviewed.length})</summary>${reviewed.map(p=>`<details><summary>${p.state==="incorporated"?"Incorporada":"Dispensada"} · ${escapeHtml(originLabel(p))}</summary><pre class="proposal-text">${escapeHtml(p.text)}</pre></details>`).join("")}</details>`:"");
+}
 function renderReference(data) {
   if(!active||data.node.id!==active.id)return;
+  const author=data.authorship;
+  const last=author?.last_edit;
+  $("#note-origin").title=last?.source_ref || "";
+  $("#note-origin").textContent=last?`${last.kind==="working_note_saved"?"Última edição preservada":"Registro inicial"}: ${originLabel(last)} · ${new Date(last.recorded_at).toLocaleString("pt-BR")} · ${author.edits} ${author.edits===1?"edição registrada":"edições registradas"}${author.proposal?" · proposta de "+originLabel(author.proposal)+" incorporada":""}`:"Origem não informada";
+  renderProposals(data);
   const p=data.package;
-  $("#context-state").textContent=data.stale?"Atualização pendente":"Preparado automaticamente";
+  $("#context-state").textContent=data.stale?"Atualização das referências pendente":"Referências aproximadas automaticamente";
   if(!p){$("#reference-contributions").innerHTML='<p class="muted small">O contexto será preparado na próxima observação das fontes.</p>';return;}
   const available=p.contributions.filter(c=>!data.feedback[c.id]||data.feedback[c.id]==="available");
   const renderKey=data.package_event_id+JSON.stringify(data.feedback);
@@ -159,11 +184,25 @@ async function actions(event){
  const target=event.target.closest("button");if(!target)return;
  if(target.dataset.openNode)return openNode(target.dataset.openNode);
  if(target.id==="export-work"&&active){await saveNote(active);if(active.dirty||active.conflict)throw Error("Conclua o salvamento para exportar o texto compartilhado.");location.href=`/api/reference/export?id=${encodeURIComponent(active.id)}`;return;}
+ if(target.id==="show-changes"){$(".workspace-history").open=true;$(".workspace-history").scrollIntoView({behavior:"smooth",block:"nearest"});return;}
+ if(target.id==="show-proposals"){$("#note-proposals").scrollIntoView({behavior:"smooth",block:"start"});return;}
  if(target.id==="more-nodes")return loadNodes(true);
  if(target.dataset.toggleSource){await request("/api/sources/active",{id:target.dataset.toggleSource,active:target.dataset.active==="true"});return renderSources();}
  if(target.dataset.version){const doc=await request(`/api/document-version?id=${encodeURIComponent(target.dataset.version)}`);const host=target.closest("details").querySelector(".source-preview");host.replaceChildren();const pre=document.createElement("pre");pre.textContent=doc.body;host.append(pre);return;}
  if(!active)return;
  const session=active;
+ if(target.dataset.acceptProposal||target.dataset.dismissProposal){
+  if(target.dataset.acceptProposal&&(session.dirty||session.inflight||session.conflict)){
+    await saveNote(session);
+    throw Error("Confira o texto preservado e a proposta antes de incorporar.");
+  }
+  target.disabled=true;
+  try {
+    await request("/api/reference/proposal/review",{id:session.id,proposal_id:target.dataset.acceptProposal||target.dataset.dismissProposal,state:target.dataset.acceptProposal?"incorporated":"dismissed",revision:Number(target.dataset.revision || session.revision)});
+    await pollReference();
+  } catch(ex) {await pollReference();throw ex;} finally {target.disabled=false;}
+  return;
+ }
  if(target.dataset.dismiss||target.dataset.incorporate){
   target.disabled=true;
   try {
@@ -192,7 +231,7 @@ async function init(){
  $("#new-idea").addEventListener("click",()=>{if(questionState.submitted?.node_id){questionState={draft:"",submitted:null};$("#query").value="";store(QUESTION_KEY,questionState);}$("#search-form").classList.remove("hidden");$("#query").focus();});
  $("#resolve-note").addEventListener("click",async()=>{if(!active?.remote)return;active.revision=active.remote.revision;active.conflict=false;conflictUI(active);await saveNote(active);});
  $("#use-remote-note").addEventListener("click",()=>{if(!active?.remote)return;active.text=active.remote.text;active.revision=active.remote.revision;active.dirty=false;active.conflict=false;$("#working-text").value=active.text;remove(`continuum.note.${active.id}`);conflictUI(active);updateStatus(active,"Versão compartilhada");});
- $(".workspace-history").addEventListener("toggle",async event=>{if(event.target.open&&active){try{const data=await request(`/api/trajectory?id=${encodeURIComponent(active.id)}`);$("#reference-history").innerHTML=data.events.map(e=>`<details class="history-event"><summary>${escapeHtml(e.kind)} · ${escapeHtml(new Date(e.recorded_at).toLocaleString("pt-BR"))} · ${escapeHtml(e.source_ref)}</summary><pre>${escapeHtml(JSON.stringify(e.payload,null,2))}</pre></details>`).join("");}catch(ex){notify(ex.message,true);}}});
+ $(".workspace-history").addEventListener("toggle",async event=>{if(event.target.open&&active){try{const data=await request(`/api/trajectory?id=${encodeURIComponent(active.id)}`);$("#reference-history").innerHTML=data.events.map(e=>`<details class="history-event"><summary>${escapeHtml(e.kind==="working_note_saved"?"Edição do texto":e.kind==="note_proposed"?"Proposta recebida":e.kind==="note_proposal_reviewed"?"Proposta examinada":e.kind)} · ${escapeHtml(new Date(e.recorded_at).toLocaleString("pt-BR"))} · ${escapeHtml(originLabel(e))}</summary>${e.kind==="working_note_saved"?`${e.payload.proposal?`<p class="small">Proposta de ${escapeHtml(originLabel(e.payload.proposal))} incorporada.</p>`:""}<p class="small muted">Cliente registrado: ${escapeHtml(e.source_ref)}${e.payload.proposal?" · proposta: "+escapeHtml(e.payload.proposal.source_ref):""}</p><h4>Antes</h4><pre>${escapeHtml(e.payload.before.text)}</pre><h4>Depois</h4><pre>${escapeHtml(e.payload.after.text)}</pre>`:`<pre>${escapeHtml(JSON.stringify(e.payload,null,2))}</pre>`}</details>`).join("");}catch(ex){notify(ex.message,true);}}});
  $$(".nav").forEach(btn=>btn.addEventListener("click",()=>show(btn.dataset.view)));
  $("#brand").addEventListener("click",event=>{event.preventDefault();show("explorar");});
  document.body.addEventListener("click",event=>actions(event).catch(ex=>notify(ex.message,true)));

@@ -99,3 +99,21 @@ A observação e as escritas por API/MCP preparam pacotes versionados. Escritas 
 Novas escritas MCP registram `source_type=mcp_client` e `source_ref=mcp:<nome informado na inicialização>`. Isso identifica o canal e o cliente declarado, sem autenticar autoria humana. Escritas HTTP usam origem `browser-or-http-client`. Eventos derivados usam `source_type=automation` e `evidence_state=generated`. Registros históricos anteriores permanecem inalterados.
 
 As evidências do pacote incluem `version_event_id` e `content_hash`; `document_version` permite recuperar o conteúdo exato mesmo após novas observações. O pacote e o texto de trabalho também podem ser inspecionados no histórico do percurso.
+
+
+## Origem visível e propostas — 0.4.0
+
+`reference` também retorna `authorship` (última edição preservada, canal e número de edições) e `proposals`. Esses dados são lidos do registro atual, independentemente da atualização do pacote lexical. A origem identifica o cliente declarado, sem autenticar sua identidade. Não atribui a autoria integral do texto ao último editor.
+
+| Método | HTTP | MCP | Parâmetros |
+|---|---|---|---|
+| POST | `/api/reference/propose` | `propose_note` | `id`, `text` (trecho adicional, 1–20.000 caracteres), `revision` atual, `request_id` UUID |
+| POST | `/api/reference/proposal/review` | Não exposto; chamadas MCP recusadas | `id`, `proposal_id`, `state` (incorporated/dismissed), `revision` da prévia |
+
+O assistente deve usar `propose_note` para contribuições. `save_note` permanece para edição direta explicitamente solicitada pelo usuário; clientes com escrita habilitada continuam capazes de editar diretamente. A separação de propostas não é uma restrição geral de acesso ao banco ou à API local.
+
+Uma proposta permanece `pending`, com origem e texto preservados. A interface mostra o trecho exato e informa que entrará **ao final** do texto. Incorporar exige a revisão apresentada: se outro ambiente alterou o texto, a operação falha e pede nova conferência. A alteração do texto, sua origem e a decisão são gravadas na mesma transação. O histórico conserva tanto o cliente que propôs quanto o cliente que incorporou, com antes/depois. O pacote lexical é atualizado em transação posterior.
+
+Repetir `request_id` com os mesmos argumentos recupera a mesma proposta, inclusive depois de examinada; argumentos diferentes são recusados. Repetir uma incorporação confirmada não acrescenta o trecho novamente. Dispensar preserva o registro e não modifica o texto. Propostas examinadas permanecem consultáveis em seção recolhida e não reaparecem como pendentes.
+
+Não há captura automática de conversas, seleção por LLM ou inferência local nesta etapa. O uso de propostas não exige modelo adicional. `verify` também compara o conteúdo e o estado das propostas com os eventos preservados.

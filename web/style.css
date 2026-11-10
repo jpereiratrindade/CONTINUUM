@@ -232,3 +232,13 @@ button.linklike:hover { text-decoration:underline; }
 @media(min-width:1150px) { .shell { grid-template-columns:205px minmax(0,1fr); } .sidebar { padding-inline:10px; } .main-inner { padding:28px clamp(20px,3vw,48px) 70px; } }
 @media(max-width:1140px) { .reference-layout { grid-template-columns:minmax(0,1fr); } .context-panel { padding:18px 0; } }
 @media(max-width:630px) { .writing-paper { padding:20px; } .workbench-heading h1 { font-size:24px; } .workbench-heading { gap:10px; } #working-text { min-height:340px; } .reference-heading h2 { font-size:17px; } }
+/* Provenance stays near the writing; proposed additions remain folded. */
+.note-origin { margin: -6px 0 18px; line-height: 1.65; overflow-wrap: anywhere; }
+.note-origin .linklike { margin-left: 6px; }
+#note-proposals:not(:empty) { border-top: 1px solid var(--line, #d6e0e9); margin-top: 20px; padding-top: 14px; }
+#note-proposals h3 { font-size: 14px; margin: 0 0 12px; }
+.text-proposal, .reviewed-proposals { padding: 12px 0; }
+.text-proposal summary { cursor: pointer; font-weight: 600; overflow-wrap: anywhere; }
+.text-proposal summary small { display: block; font-weight: 400; color: #58718a; margin-top: 5px; }
+.proposal-text { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; line-height: 1.7; }
+.history-event pre { white-space: pre-wrap; overflow-wrap: anywhere; }

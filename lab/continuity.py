@@ -33,6 +33,8 @@ def schema(lab):
             state TEXT NOT NULL, PRIMARY KEY(node_id,suggestion_id)
         );
     ''')
+    from .proposals import schema as proposal_schema
+    proposal_schema(lab)
 
 
 def note(lab, ident):
@@ -179,7 +181,9 @@ def reference(lab, ident):
             package = json.loads(row['payload']) if row else None
             feedback = {r['suggestion_id']: r['state'] for r in lab.db.execute(
                 'SELECT suggestion_id,state FROM contribution_feedback WHERE node_id=?', (ident,))}
+            from .proposals import authorship, list_proposals
             return {'node': node, 'note': working, 'package': package, 'package_event_id': row['event_id'] if row else None,
+                    'authorship': authorship(lab, ident), 'proposals': list_proposals(lab, ident),
                     'stale': not row or row['basis_hash'] != basis(lab, node, working), 'feedback': feedback}
         finally:
             if owns_transaction:
