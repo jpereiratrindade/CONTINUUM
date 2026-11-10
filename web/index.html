@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#061c34">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <title>CONTINUUM · Laboratório de Continuidade Intelectual</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <svg xmlns="http://www.w3.org/2000/svg" class="icon-defs" aria-hidden="true">
+<symbol id="icon-question" viewBox="0 0 24 24"><circle cx="10" cy="10" r="6"/><path d="m15 15 6 6M8 9a2 2 0 1 1 3 2l-1 1m0 2h.01"/></symbol>
+<symbol id="icon-trajectory" viewBox="0 0 24 24"><path d="M5 5v11a3 3 0 0 0 3 3h11M5 9h7a3 3 0 0 1 3 3v7"/><circle cx="5" cy="4" r="2"/><circle cx="20" cy="19" r="2"/></symbol>
+<symbol id="icon-sources" viewBox="0 0 24 24"><path d="M3 6h7l2 2h9v12H3zM3 11h18"/><path d="M7 15h5m-5 2h8"/></symbol>
+<symbol id="icon-laboratory" viewBox="0 0 24 24"><path d="M9 3h6m-5 0v6l-6 10a1 1 0 0 0 1 2h14a1 1 0 0 0 1-2L14 9V3M7 15h10"/><circle cx="11" cy="17" r=".5"/></symbol>
+<symbol id="icon-export" viewBox="0 0 24 24"><path d="M12 3v12m-4-4 4 4 4-4M4 17v4h16v-4"/></symbol>
+<symbol id="icon-draft" viewBox="0 0 24 24"><path d="M13 3H5v18h14V11M9 15l1-4 8-8 3 3-8 8zM16 5l3 3"/></symbol>
+<symbol id="icon-scan" viewBox="0 0 24 24"><path d="M4 8V4h4m8 0h4v4m0 8v4h-4M8 20H4v-4M3 12h18"/></symbol>
+<symbol id="icon-arrow" viewBox="0 0 24 24"><path d="M4 12h16m-6-6 6 6-6 6"/></symbol>
+<symbol id="icon-link" viewBox="0 0 24 24"><path d="m10 8 2-2a5 5 0 0 1 7 7l-2 2M14 16l-2 2a5 5 0 0 1-7-7l2-2m1 7 8-8"/></symbol>
+<symbol id="icon-verify" viewBox="0 0 24 24"><path d="m12 2 9 4v6c0 5-4 8-9 10-5-2-9-5-9-10V6zM8 12l3 3 5-6"/></symbol>
+  </svg>
+  <a class="skip-link" href="#main-content">Ir para o conteúdo</a>
+  <header class="masthead">
+    <a href="#explorar" class="mast-brand" id="brand" aria-label="CONTINUUM: explorar questões"><svg class="project-mark brand-symbol" viewBox="0 0 128 96" aria-hidden="true"><defs>
+  <linearGradient id="brand-cyan" x1="0" x2="1" y1="1" y2="0"><stop stop-color="#09a8c4"/><stop offset=".48" stop-color="#43d1e7"/><stop offset="1" stop-color="#0b86a9"/></linearGradient>
+  <linearGradient id="brand-amber" x1="0" x2="1" y1="1" y2="0"><stop stop-color="#e8a84e"/><stop offset=".45" stop-color="#ffe19a"/><stop offset="1" stop-color="#f5a749"/></linearGradient>
+</defs>
+<path d="M 11 48 C 31 12 51 16 66 48 C 84 82 103 78 118 47" fill="none" stroke="url(#brand-cyan)" stroke-width="18" stroke-linecap="round" opacity="0.25"/>
+<path d="M 11 48 C 31 12 51 16 66 48 C 84 82 103 78 118 47" transform="translate(0 -6.56)" fill="none" stroke="url(#brand-cyan)" stroke-width="0.85" stroke-linecap="round" opacity="0.55"/>
+<path d="M 11 48 C 31 12 51 16 66 48 C 84 82 103 78 118 47" transform="translate(0 -5.74)" fill="none" stroke="url(#brand-cyan)" stroke-width="0.85" stroke-linecap="round" opacity="0.55"/>
+<path d="M 11 48 C 31 12 51 16 66 48 C 84 82 103 78 118 47" transform="translate(0 -4.92)" fill="none" stroke="url(#brand-cyan)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 31 12 51 16 66 48 C 84 82 103 78 118 47" transform="translate(0 -4.10)" fill="none" stroke="url(#brand-cyan)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 31 12 51 16 66 48 C 84 82 103 78 118 47" transform="translate(0 -3.28)" fill="none" stroke="url(#brand-cyan)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 31 12 51 16 66 48 C 84 82 103 78 118 47" transform="translate(0 -2.46)" fill="none" stroke="url(#brand-cyan)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 31 12 51 16 66 48 C 84 82 103 78 118 47" transform="translate(0 -1.64)" fill="none" stroke="url(#brand-cyan)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 31 12 51 16 66 48 C 84 82 103 78 118 47" transform="translate(0 -0.82)" fill="none" stroke="url(#brand-cyan)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 31 12 51 16 66 48 C 84 82 103 78 118 47" transform="translate(0 0.00)" fill="none" stroke="url(#brand-cyan)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 31 12 51 16 66 48 C 84 82 103 78 118 47" transform="translate(0 0.82)" fill="none" stroke="url(#brand-cyan)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 31 12 51 16 66 48 C 84 82 103 78 118 47" transform="translate(0 1.64)" fill="none" stroke="url(#brand-cyan)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 31 12 51 16 66 48 C 84 82 103 78 118 47" transform="translate(0 2.46)" fill="none" stroke="url(#brand-cyan)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 31 12 51 16 66 48 C 84 82 103 78 118 47" transform="translate(0 3.28)" fill="none" stroke="url(#brand-cyan)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 31 12 51 16 66 48 C 84 82 103 78 118 47" transform="translate(0 4.10)" fill="none" stroke="url(#brand-cyan)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 31 12 51 16 66 48 C 84 82 103 78 118 47" transform="translate(0 4.92)" fill="none" stroke="url(#brand-cyan)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 31 12 51 16 66 48 C 84 82 103 78 118 47" transform="translate(0 5.74)" fill="none" stroke="url(#brand-cyan)" stroke-width="0.85" stroke-linecap="round" opacity="0.55"/>
+<path d="M 11 48 C 31 12 51 16 66 48 C 84 82 103 78 118 47" transform="translate(0 6.56)" fill="none" stroke="url(#brand-cyan)" stroke-width="0.85" stroke-linecap="round" opacity="0.55"/>
+<path d="M 11 48 C 30 81 52 81 66 48 C 85 13 103 17 118 47" fill="none" stroke="url(#brand-amber)" stroke-width="18" stroke-linecap="round" opacity="0.25"/>
+<path d="M 11 48 C 30 81 52 81 66 48 C 85 13 103 17 118 47" transform="translate(0 -6.56)" fill="none" stroke="url(#brand-amber)" stroke-width="0.85" stroke-linecap="round" opacity="0.55"/>
+<path d="M 11 48 C 30 81 52 81 66 48 C 85 13 103 17 118 47" transform="translate(0 -5.74)" fill="none" stroke="url(#brand-amber)" stroke-width="0.85" stroke-linecap="round" opacity="0.55"/>
+<path d="M 11 48 C 30 81 52 81 66 48 C 85 13 103 17 118 47" transform="translate(0 -4.92)" fill="none" stroke="url(#brand-amber)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 30 81 52 81 66 48 C 85 13 103 17 118 47" transform="translate(0 -4.10)" fill="none" stroke="url(#brand-amber)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 30 81 52 81 66 48 C 85 13 103 17 118 47" transform="translate(0 -3.28)" fill="none" stroke="url(#brand-amber)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 30 81 52 81 66 48 C 85 13 103 17 118 47" transform="translate(0 -2.46)" fill="none" stroke="url(#brand-amber)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 30 81 52 81 66 48 C 85 13 103 17 118 47" transform="translate(0 -1.64)" fill="none" stroke="url(#brand-amber)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 30 81 52 81 66 48 C 85 13 103 17 118 47" transform="translate(0 -0.82)" fill="none" stroke="url(#brand-amber)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 30 81 52 81 66 48 C 85 13 103 17 118 47" transform="translate(0 0.00)" fill="none" stroke="url(#brand-amber)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 30 81 52 81 66 48 C 85 13 103 17 118 47" transform="translate(0 0.82)" fill="none" stroke="url(#brand-amber)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 30 81 52 81 66 48 C 85 13 103 17 118 47" transform="translate(0 1.64)" fill="none" stroke="url(#brand-amber)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 30 81 52 81 66 48 C 85 13 103 17 118 47" transform="translate(0 2.46)" fill="none" stroke="url(#brand-amber)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 30 81 52 81 66 48 C 85 13 103 17 118 47" transform="translate(0 3.28)" fill="none" stroke="url(#brand-amber)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 30 81 52 81 66 48 C 85 13 103 17 118 47" transform="translate(0 4.10)" fill="none" stroke="url(#brand-amber)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 30 81 52 81 66 48 C 85 13 103 17 118 47" transform="translate(0 4.92)" fill="none" stroke="url(#brand-amber)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 30 81 52 81 66 48 C 85 13 103 17 118 47" transform="translate(0 5.74)" fill="none" stroke="url(#brand-amber)" stroke-width="0.85" stroke-linecap="round" opacity="0.55"/>
+<path d="M 11 48 C 30 81 52 81 66 48 C 85 13 103 17 118 47" transform="translate(0 6.56)" fill="none" stroke="url(#brand-amber)" stroke-width="0.85" stroke-linecap="round" opacity="0.55"/></svg><strong>CONTINUUM</strong></a>
+    <span class="mast-description">Laboratório de Continuidade Intelectual<small>MEMÓRIA · INVESTIGAÇÃO · CONTINUIDADE</small></span>
+    <span id="health" class="mast-health" role="status">Iniciando…</span>
+  </header>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="sidebar-label">LABORATÓRIO</div>
+      <nav aria-label="Navegação principal">
+        <button class="nav active" data-view="explorar"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-question"/></svg> Explorar questões</button>
+        <button class="nav" data-view="trajetorias"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-trajectory"/></svg> Trajetórias</button>
+        <button class="nav" data-view="fontes"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-sources"/></svg> Fontes observadas</button>
+        <button class="nav" data-view="laboratorio"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-laboratory"/></svg> O laboratório</button>
+      </nav>
+      <div class="sidebar-bottom"><div class="principles"><svg class="project-mark principles-symbol" viewBox="0 0 128 96" aria-hidden="true"><defs>
+  <linearGradient id="principles-cyan" x1="0" x2="1" y1="1" y2="0"><stop stop-color="#09a8c4"/><stop offset=".48" stop-color="#43d1e7"/><stop offset="1" stop-color="#0b86a9"/></linearGradient>
+  <linearGradient id="principles-amber" x1="0" x2="1" y1="1" y2="0"><stop stop-color="#e8a84e"/><stop offset=".45" stop-color="#ffe19a"/><stop offset="1" stop-color="#f5a749"/></linearGradient>
+</defs>
+<path d="M 11 48 C 31 12 51 16 66 48 C 84 82 103 78 118 47" fill="none" stroke="url(#principles-cyan)" stroke-width="18" stroke-linecap="round" opacity="0.25"/>
+<path d="M 11 48 C 31 12 51 16 66 48 C 84 82 103 78 118 47" transform="translate(0 -6.56)" fill="none" stroke="url(#principles-cyan)" stroke-width="0.85" stroke-linecap="round" opacity="0.55"/>
+<path d="M 11 48 C 31 12 51 16 66 48 C 84 82 103 78 118 47" transform="translate(0 -5.74)" fill="none" stroke="url(#principles-cyan)" stroke-width="0.85" stroke-linecap="round" opacity="0.55"/>
+<path d="M 11 48 C 31 12 51 16 66 48 C 84 82 103 78 118 47" transform="translate(0 -4.92)" fill="none" stroke="url(#principles-cyan)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 31 12 51 16 66 48 C 84 82 103 78 118 47" transform="translate(0 -4.10)" fill="none" stroke="url(#principles-cyan)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 31 12 51 16 66 48 C 84 82 103 78 118 47" transform="translate(0 -3.28)" fill="none" stroke="url(#principles-cyan)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 31 12 51 16 66 48 C 84 82 103 78 118 47" transform="translate(0 -2.46)" fill="none" stroke="url(#principles-cyan)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 31 12 51 16 66 48 C 84 82 103 78 118 47" transform="translate(0 -1.64)" fill="none" stroke="url(#principles-cyan)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 31 12 51 16 66 48 C 84 82 103 78 118 47" transform="translate(0 -0.82)" fill="none" stroke="url(#principles-cyan)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 31 12 51 16 66 48 C 84 82 103 78 118 47" transform="translate(0 0.00)" fill="none" stroke="url(#principles-cyan)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 31 12 51 16 66 48 C 84 82 103 78 118 47" transform="translate(0 0.82)" fill="none" stroke="url(#principles-cyan)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 31 12 51 16 66 48 C 84 82 103 78 118 47" transform="translate(0 1.64)" fill="none" stroke="url(#principles-cyan)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 31 12 51 16 66 48 C 84 82 103 78 118 47" transform="translate(0 2.46)" fill="none" stroke="url(#principles-cyan)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 31 12 51 16 66 48 C 84 82 103 78 118 47" transform="translate(0 3.28)" fill="none" stroke="url(#principles-cyan)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 31 12 51 16 66 48 C 84 82 103 78 118 47" transform="translate(0 4.10)" fill="none" stroke="url(#principles-cyan)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 31 12 51 16 66 48 C 84 82 103 78 118 47" transform="translate(0 4.92)" fill="none" stroke="url(#principles-cyan)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 31 12 51 16 66 48 C 84 82 103 78 118 47" transform="translate(0 5.74)" fill="none" stroke="url(#principles-cyan)" stroke-width="0.85" stroke-linecap="round" opacity="0.55"/>
+<path d="M 11 48 C 31 12 51 16 66 48 C 84 82 103 78 118 47" transform="translate(0 6.56)" fill="none" stroke="url(#principles-cyan)" stroke-width="0.85" stroke-linecap="round" opacity="0.55"/>
+<path d="M 11 48 C 30 81 52 81 66 48 C 85 13 103 17 118 47" fill="none" stroke="url(#principles-amber)" stroke-width="18" stroke-linecap="round" opacity="0.25"/>
+<path d="M 11 48 C 30 81 52 81 66 48 C 85 13 103 17 118 47" transform="translate(0 -6.56)" fill="none" stroke="url(#principles-amber)" stroke-width="0.85" stroke-linecap="round" opacity="0.55"/>
+<path d="M 11 48 C 30 81 52 81 66 48 C 85 13 103 17 118 47" transform="translate(0 -5.74)" fill="none" stroke="url(#principles-amber)" stroke-width="0.85" stroke-linecap="round" opacity="0.55"/>
+<path d="M 11 48 C 30 81 52 81 66 48 C 85 13 103 17 118 47" transform="translate(0 -4.92)" fill="none" stroke="url(#principles-amber)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 30 81 52 81 66 48 C 85 13 103 17 118 47" transform="translate(0 -4.10)" fill="none" stroke="url(#principles-amber)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 30 81 52 81 66 48 C 85 13 103 17 118 47" transform="translate(0 -3.28)" fill="none" stroke="url(#principles-amber)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 30 81 52 81 66 48 C 85 13 103 17 118 47" transform="translate(0 -2.46)" fill="none" stroke="url(#principles-amber)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 30 81 52 81 66 48 C 85 13 103 17 118 47" transform="translate(0 -1.64)" fill="none" stroke="url(#principles-amber)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 30 81 52 81 66 48 C 85 13 103 17 118 47" transform="translate(0 -0.82)" fill="none" stroke="url(#principles-amber)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 30 81 52 81 66 48 C 85 13 103 17 118 47" transform="translate(0 0.00)" fill="none" stroke="url(#principles-amber)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 30 81 52 81 66 48 C 85 13 103 17 118 47" transform="translate(0 0.82)" fill="none" stroke="url(#principles-amber)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 30 81 52 81 66 48 C 85 13 103 17 118 47" transform="translate(0 1.64)" fill="none" stroke="url(#principles-amber)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 30 81 52 81 66 48 C 85 13 103 17 118 47" transform="translate(0 2.46)" fill="none" stroke="url(#principles-amber)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 30 81 52 81 66 48 C 85 13 103 17 118 47" transform="translate(0 3.28)" fill="none" stroke="url(#principles-amber)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 30 81 52 81 66 48 C 85 13 103 17 118 47" transform="translate(0 4.10)" fill="none" stroke="url(#principles-amber)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 30 81 52 81 66 48 C 85 13 103 17 118 47" transform="translate(0 4.92)" fill="none" stroke="url(#principles-amber)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 30 81 52 81 66 48 C 85 13 103 17 118 47" transform="translate(0 5.74)" fill="none" stroke="url(#principles-amber)" stroke-width="0.85" stroke-linecap="round" opacity="0.55"/>
+<path d="M 11 48 C 30 81 52 81 66 48 C 85 13 103 17 118 47" transform="translate(0 6.56)" fill="none" stroke="url(#principles-amber)" stroke-width="0.85" stroke-linecap="round" opacity="0.55"/></svg><strong>REA · RIT · MPRR</strong><span>Reflexividade · Integridade temporal · Percepção relacional</span><small>Sempre pronto. Sempre incompleto.</small></div><span class="signal"></span> Experimento local, rastreável<br><small>Continuidade entre fontes e ferramentas</small></div>
+    </aside>
+    <main class="content" id="main-content" tabindex="-1">
+      <div class="topbar"><strong>CONTINUUM</strong><span aria-hidden="true">/</span><span id="current-view">Explorar questões</span></div>
+      <div class="main-inner">
+        <section class="view" id="view-explorar" aria-labelledby="explore-title">
+          <div class="hero"><div class="hero-copy">
+          <div class="eyebrow">UM AMBIENTE PARA INVESTIGAR, NÃO APENAS ARQUIVAR</div>
+          <h1 id="explore-title">O que queremos <em>compreender</em> hoje?</h1>
+          <p class="lead">Parta de uma questão. O laboratório recupera registros disponíveis, apresenta incertezas e propõe aproximações para investigar — nunca conclusões automáticas.</p>
+          </div><svg class="project-mark hero-art" viewBox="0 0 128 96" aria-hidden="true"><defs>
+  <linearGradient id="hero-cyan" x1="0" x2="1" y1="1" y2="0"><stop stop-color="#09a8c4"/><stop offset=".48" stop-color="#43d1e7"/><stop offset="1" stop-color="#0b86a9"/></linearGradient>
+  <linearGradient id="hero-amber" x1="0" x2="1" y1="1" y2="0"><stop stop-color="#e8a84e"/><stop offset=".45" stop-color="#ffe19a"/><stop offset="1" stop-color="#f5a749"/></linearGradient>
+</defs>
+<path d="M 11 48 C 31 12 51 16 66 48 C 84 82 103 78 118 47" fill="none" stroke="url(#hero-cyan)" stroke-width="18" stroke-linecap="round" opacity="0.25"/>
+<path d="M 11 48 C 31 12 51 16 66 48 C 84 82 103 78 118 47" transform="translate(0 -6.56)" fill="none" stroke="url(#hero-cyan)" stroke-width="0.85" stroke-linecap="round" opacity="0.55"/>
+<path d="M 11 48 C 31 12 51 16 66 48 C 84 82 103 78 118 47" transform="translate(0 -5.74)" fill="none" stroke="url(#hero-cyan)" stroke-width="0.85" stroke-linecap="round" opacity="0.55"/>
+<path d="M 11 48 C 31 12 51 16 66 48 C 84 82 103 78 118 47" transform="translate(0 -4.92)" fill="none" stroke="url(#hero-cyan)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 31 12 51 16 66 48 C 84 82 103 78 118 47" transform="translate(0 -4.10)" fill="none" stroke="url(#hero-cyan)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 31 12 51 16 66 48 C 84 82 103 78 118 47" transform="translate(0 -3.28)" fill="none" stroke="url(#hero-cyan)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 31 12 51 16 66 48 C 84 82 103 78 118 47" transform="translate(0 -2.46)" fill="none" stroke="url(#hero-cyan)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 31 12 51 16 66 48 C 84 82 103 78 118 47" transform="translate(0 -1.64)" fill="none" stroke="url(#hero-cyan)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 31 12 51 16 66 48 C 84 82 103 78 118 47" transform="translate(0 -0.82)" fill="none" stroke="url(#hero-cyan)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 31 12 51 16 66 48 C 84 82 103 78 118 47" transform="translate(0 0.00)" fill="none" stroke="url(#hero-cyan)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 31 12 51 16 66 48 C 84 82 103 78 118 47" transform="translate(0 0.82)" fill="none" stroke="url(#hero-cyan)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 31 12 51 16 66 48 C 84 82 103 78 118 47" transform="translate(0 1.64)" fill="none" stroke="url(#hero-cyan)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 31 12 51 16 66 48 C 84 82 103 78 118 47" transform="translate(0 2.46)" fill="none" stroke="url(#hero-cyan)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 31 12 51 16 66 48 C 84 82 103 78 118 47" transform="translate(0 3.28)" fill="none" stroke="url(#hero-cyan)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 31 12 51 16 66 48 C 84 82 103 78 118 47" transform="translate(0 4.10)" fill="none" stroke="url(#hero-cyan)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 31 12 51 16 66 48 C 84 82 103 78 118 47" transform="translate(0 4.92)" fill="none" stroke="url(#hero-cyan)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 31 12 51 16 66 48 C 84 82 103 78 118 47" transform="translate(0 5.74)" fill="none" stroke="url(#hero-cyan)" stroke-width="0.85" stroke-linecap="round" opacity="0.55"/>
+<path d="M 11 48 C 31 12 51 16 66 48 C 84 82 103 78 118 47" transform="translate(0 6.56)" fill="none" stroke="url(#hero-cyan)" stroke-width="0.85" stroke-linecap="round" opacity="0.55"/>
+<path d="M 11 48 C 30 81 52 81 66 48 C 85 13 103 17 118 47" fill="none" stroke="url(#hero-amber)" stroke-width="18" stroke-linecap="round" opacity="0.25"/>
+<path d="M 11 48 C 30 81 52 81 66 48 C 85 13 103 17 118 47" transform="translate(0 -6.56)" fill="none" stroke="url(#hero-amber)" stroke-width="0.85" stroke-linecap="round" opacity="0.55"/>
+<path d="M 11 48 C 30 81 52 81 66 48 C 85 13 103 17 118 47" transform="translate(0 -5.74)" fill="none" stroke="url(#hero-amber)" stroke-width="0.85" stroke-linecap="round" opacity="0.55"/>
+<path d="M 11 48 C 30 81 52 81 66 48 C 85 13 103 17 118 47" transform="translate(0 -4.92)" fill="none" stroke="url(#hero-amber)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 30 81 52 81 66 48 C 85 13 103 17 118 47" transform="translate(0 -4.10)" fill="none" stroke="url(#hero-amber)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 30 81 52 81 66 48 C 85 13 103 17 118 47" transform="translate(0 -3.28)" fill="none" stroke="url(#hero-amber)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 30 81 52 81 66 48 C 85 13 103 17 118 47" transform="translate(0 -2.46)" fill="none" stroke="url(#hero-amber)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 30 81 52 81 66 48 C 85 13 103 17 118 47" transform="translate(0 -1.64)" fill="none" stroke="url(#hero-amber)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 30 81 52 81 66 48 C 85 13 103 17 118 47" transform="translate(0 -0.82)" fill="none" stroke="url(#hero-amber)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 30 81 52 81 66 48 C 85 13 103 17 118 47" transform="translate(0 0.00)" fill="none" stroke="url(#hero-amber)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 30 81 52 81 66 48 C 85 13 103 17 118 47" transform="translate(0 0.82)" fill="none" stroke="url(#hero-amber)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 30 81 52 81 66 48 C 85 13 103 17 118 47" transform="translate(0 1.64)" fill="none" stroke="url(#hero-amber)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 30 81 52 81 66 48 C 85 13 103 17 118 47" transform="translate(0 2.46)" fill="none" stroke="url(#hero-amber)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 30 81 52 81 66 48 C 85 13 103 17 118 47" transform="translate(0 3.28)" fill="none" stroke="url(#hero-amber)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 30 81 52 81 66 48 C 85 13 103 17 118 47" transform="translate(0 4.10)" fill="none" stroke="url(#hero-amber)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 30 81 52 81 66 48 C 85 13 103 17 118 47" transform="translate(0 4.92)" fill="none" stroke="url(#hero-amber)" stroke-width="0.85" stroke-linecap="round" opacity="0.88"/>
+<path d="M 11 48 C 30 81 52 81 66 48 C 85 13 103 17 118 47" transform="translate(0 5.74)" fill="none" stroke="url(#hero-amber)" stroke-width="0.85" stroke-linecap="round" opacity="0.55"/>
+<path d="M 11 48 C 30 81 52 81 66 48 C 85 13 103 17 118 47" transform="translate(0 6.56)" fill="none" stroke="url(#hero-amber)" stroke-width="0.85" stroke-linecap="round" opacity="0.55"/></svg></div>
+          <form id="search-form" class="question-box">
+            <label for="query">Questão, ideia ou problema</label>
+            <textarea id="query" name="query" rows="3" maxlength="4000" required placeholder="Ex.: Como a idempotência atravessa nossos sistemas e a integridade temporal?"></textarea>
+            <div class="question-actions"><span>Fontes citadas · relações candidatas · próximos passos</span><button class="primary" type="submit">Investigar <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-arrow"/></svg></button></div>
+          </form>
+          <p id="question-status" class="question-status" role="status">Ao investigar, sua pergunta será preservada em Trajetórias.</p>
+          <div class="home-section" id="resume"><h2>Retomadas possíveis</h2><p class="muted">Carregando trajetórias…</p></div>
+          <div class="results hidden" id="results" aria-live="polite">
+            <div class="section-heading"><div><div class="eyebrow">RETOMADA CONTEXTUAL</div><h2>O que encontramos</h2></div><div class="toolbar"><button id="download" class="subtle"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-export"/></svg> Exportar MD</button><button id="draft" class="subtle"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-draft"/></svg> Criar roteiro</button></div></div>
+            <div id="summary" class="notice"></div>
+            <div class="result-layout"><div id="document-results"></div><div id="node-results"></div></div>
+            <div id="connection-results"></div>
+            <div class="next-step" id="next-step"></div>
+            <details class="optional" id="ai-details"><summary>Explorar hipóteses com modelo local (opcional)</summary><p>Somente quando habilitado no servidor. Resposta interpretativa não verificada, sem execução de ferramentas.</p><button id="llm" class="subtle">Gerar reflexão experimental</button><div id="llm-output"></div></details>
+          </div>
+        </section>
+        <section class="view hidden" id="view-trajetorias" aria-labelledby="trajectory-title">
+          <div class="eyebrow">MEMÓRIA EM TRANSFORMAÇÃO</div><h1 id="trajectory-title">Trajetórias <em>intelectuais</em></h1>
+          <p class="lead">Questões, ideias, hipóteses, decisões, oportunidades e experimentos. Revisões são novos acontecimentos; não apagam a história.</p>
+          <div class="two-col"><div><h2>Elementos acompanhados</h2><div id="node-list" class="stack"></div></div>
+            <section class="panel" aria-label="Nova questão"><h2>Iniciar uma trajetória</h2>
+              <form id="node-form" class="stack">
+                <label for="node-kind">Natureza</label><select id="node-kind"><option value="question">Questão</option><option value="idea">Ideia</option><option value="hypothesis">Hipótese</option><option value="decision">Decisão declarada</option><option value="experiment">Experimento</option><option value="opportunity">Oportunidade candidata</option></select>
+                <label for="node-title">Título</label><input id="node-title" maxlength="240" required placeholder="Que questão queremos acompanhar?">
+                <label for="node-body">Contexto inicial</label><textarea id="node-body" rows="4" maxlength="20000" placeholder="Contexto, dúvidas, evidências conhecidas…"></textarea>
+                <button class="primary" type="submit">Registrar início</button>
+              </form>
+            </section></div>
+          <div id="trajectory-detail" class="panel hidden" aria-live="polite"></div>
+          <section class="panel"><h2>Declarar uma relação entre trajetórias</h2><p class="muted">Confirmação humana significa apenas que uma pessoa declarou o vínculo, não que ele foi validado cientificamente.</p>
+            <form id="link-form" class="link-form">
+              <label>Origem<select id="link-source" required></select></label>
+              <label>Destino<select id="link-target" required></select></label>
+              <label>Relação<select id="link-relation"><option value="relates_to">Relaciona-se a</option><option value="supports">Pode sustentar</option><option value="contradicts">Contradiz</option><option value="evolves_into">Evolui para</option><option value="depends_on">Depende de</option></select></label>
+              <label>Estado<select id="link-state"><option value="candidate">Candidata</option><option value="endorsed">Declarada pela pessoa</option><option value="rejected">Rejeitada pela pessoa</option></select></label>
+              <label class="full">Justificativa<input id="link-reason" required maxlength="2000" placeholder="Por que essa relação foi proposta?"></label>
+              <button class="subtle" type="submit">Registrar relação</button>
+            </form>
+          </section>
+        </section>
+        <section class="view hidden" id="view-fontes" aria-labelledby="sources-title">
+          <div class="eyebrow">OBSERVAÇÃO AUTORIZADA</div><h1 id="sources-title">De onde vem a <em>memória</em>?</h1>
+          <p class="lead">Somente diretórios cadastrados são observados. O sistema lê Markdown, LaTeX e texto, sem modificar os originais.</p>
+          <div class="two-col"><div><h2>Fontes vinculadas</h2><div id="source-list" class="stack"></div><button id="scan" class="subtle"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-scan"/></svg> Observar fontes agora</button></div>
+            <section class="panel"><h2>Autorizar uma pasta</h2><form id="source-form" class="stack">
+              <label for="source-label">Identificação</label><input id="source-label" required value="Documentos de investigação">
+              <label for="source-path">Caminho absoluto no computador</label><input id="source-path" required placeholder="/home/usuario/Documentos/projetos">
+              <p class="muted small">O caminho e títulos entram na memória local. Não selecione diretórios confidenciais sem avaliação.</p>
+              <button class="primary" type="submit">Autorizar observação</button>
+            </form></section></div>
+        </section>
+        <section class="view hidden" id="view-laboratorio" aria-labelledby="lab-title">
+          <div class="eyebrow">PROGRAMA DE PESQUISA E ENGENHARIA</div><h1 id="lab-title">O laboratório <em>se avalia</em></h1>
+          <p class="lead">Esta versão é uma hipótese executável. Seus resultados devem ser confrontados com situações reais, falhas e evidências.</p>
+          <div id="lab-stats" class="metrics"></div>
+          <div class="panel"><h2>Princípios operacionais</h2><div class="principle-grid"><article><h3>REA</h3><p>Revisões registradas, sem reescrita silenciosa.</p></article><article><h3>RIT</h3><p>Distinção entre ocorrência e registro; cadeia verificável.</p></article><article><h3>MPRR</h3><p>Relações candidatas, com bases e limites explícitos.</p></article><article><h3>Incompletude</h3><p>Ausência de resultado não equivale à ausência de conhecimento.</p></article></div></div>
+          <div class="panel"><h2>Questões em aberto</h2><p>O sistema reduz o custo de retomada? As conexões sugeridas são úteis? A automação reduz trabalho ou cria ruído? Respostas dependem de avaliação empírica, não de uma demonstração visual.</p><p class="muted">Consulte os protocolos e critérios nos documentos versionados do projeto.</p></div>
+          <div id="recent-events"></div>
+        </section>
+      </div>
+      <div role="status" id="toast" aria-live="polite" class="toast hidden"></div>
+    </main>
+  </div>
+</body>
+</html>
