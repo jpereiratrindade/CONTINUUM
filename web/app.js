@@ -246,14 +246,14 @@ function renderCriticalTrajectory(data) {
   active.critKey=key;
   const counts=crit.context_counts||{};
   if($("#reference-context-counts")){
-    $("#reference-context-counts").innerHTML=`<div class="ctx-check"><span>✓ Documentos</span><strong>${counts.documents||0}</strong></div><div class="ctx-check"><span>✓ Discussões</span><strong>${counts.dialogues||0}</strong></div><div class="ctx-check"><span>✓ Commits / versões</span><strong>${counts.commits||0}</strong></div><div class="ctx-check" title="${counts.moves||0} movimentos reconstruídos"><span>✓ Transformações</span><strong>${counts.transformations||0}</strong></div>`;
+    $("#reference-context-counts").innerHTML=`<div class="ctx-check"><span>✓ Docs</span><strong>${counts.documents||0}</strong></div><div class="ctx-check"><span>✓ Discussões</span><strong>${counts.dialogues||0}</strong></div><div class="ctx-check"><span>✓ Versões</span><strong>${counts.commits||0}</strong></div><div class="ctx-check" title="${counts.moves||0} movimentos reconstruídos"><span>✓ Transf.</span><strong>${counts.transformations||0}</strong></div>`;
   }
   const ribbon=crit.transformation_ribbon||[];
   active.ribbonSteps = ribbon;
   if($("#reference-ribbon")){
     $("#reference-ribbon").innerHTML=ribbon.length?ribbon.map((step,idx)=>{
       const isHighlight = step.kind === "reformulation" || step.concept_title === "Achado atual";
-      return `<button type="button" class="ribbon-step${isHighlight?" ribbon-highlight":""}" data-kind="${escapeHtml(step.kind)}" data-ribbon-idx="${idx}" title="Clique para inspecionar: ${escapeHtml(step.summary)}"><span class="ribbon-num">${idx+1}. ${escapeHtml(step.stage_label)}</span><strong>${escapeHtml(step.concept_title || step.stage_label)}</strong><small>${escapeHtml(spanLabel(step.evidence_refs, true))}</small></button>`;
+      return `<button type="button" class="ribbon-step${isHighlight?" ribbon-highlight":""}" data-kind="${escapeHtml(step.kind)}" data-ribbon-idx="${idx}" title="Clique para inspecionar (${escapeHtml(spanLabel(step.evidence_refs, true))}): ${escapeHtml(step.summary)}"><span class="ribbon-num">${idx+1} · ${escapeHtml(step.stage_label)}</span><strong>${escapeHtml(step.concept_title || step.stage_label)}</strong></button>`;
     }).join('<div class="ribbon-arrow" aria-hidden="true">→</div>'):'<p class="small muted">Importe um diálogo autorizado para reconstruir a trajetória de transformações (proposta → objeção → reformulação).</p>';
     if ($("#ribbon-inspector")) $("#ribbon-inspector").classList.add("hidden");
   }
@@ -267,30 +267,30 @@ function renderCriticalTrajectory(data) {
       $("#reference-critical-chains").innerHTML=`<div class="empty-synthesis"><p class="muted">Este percurso ainda não possui diálogos importados para síntese de transformações.</p><button type="button" class="subtle" data-switch-ws="editor">✎ Escrever no caderno Markdown</button></div>`;
     } else if (ws) {
       const objId = ws.revision_objection?.id;
-      const chainsDrawer = chains.length ? `<details class="older-chains"><summary>Inspecionar ${chains.length === 1 ? "o ciclo detalhado de transformação" : `os ${chains.length} ciclos detalhados`} e âncoras de turno</summary><div class="older-chains-body">${chains.map((ch, idx) => renderChainCard(ch, idx)).join("")}</div></details>` : "";
+      const chainsDrawer = chains.length ? `<details class="older-chains"><summary>Ciclos detalhados (${chains.length})</summary><div class="older-chains-body">${chains.map((ch, idx) => renderChainCard(ch, idx)).join("")}</div></details>` : "";
       $("#reference-critical-chains").innerHTML = `<div class="living-synthesis-card">
         <ul class="synthesis-bullets">
           <li class="syn-item syn-proposal">
-            <div class="syn-bullet-head"><strong>Hipótese inicial:</strong> <span class="syn-turn">${escapeHtml(spanLabel(ws.initial_hypothesis.evidence_refs, true))}</span></div>
+            <div class="syn-bullet-head"><strong>Hipótese inicial</strong> <span class="syn-turn">${escapeHtml(spanLabel(ws.initial_hypothesis.evidence_refs, true))}</span></div>
             <div class="syn-bullet-text">${escapeHtml(ws.initial_hypothesis.text)}</div>
           </li>
           <li class="syn-item syn-objection">
-            <div class="syn-bullet-head"><strong>Revisão / objeção:</strong> <span class="syn-turn">${escapeHtml(spanLabel(ws.revision_objection.evidence_refs, true))}</span></div>
+            <div class="syn-bullet-head"><strong>Revisão / objeção</strong> <span class="syn-turn">${escapeHtml(spanLabel(ws.revision_objection.evidence_refs, true))}</span></div>
             <div class="syn-bullet-text">${highlightTransformText(ws.revision_objection.text)}</div>
-            ${objId ? `<details class="syn-inline-eval"><summary>Avaliar objeção ou ver leitura alternativa</summary><div class="syn-eval-box"><div class="small muted"><em>Leitura alternativa:</em> ${escapeHtml(ws.revision_objection.alternative_reading)} · <strong>Fonte:</strong> ${escapeHtml(spanLabel(ws.revision_objection.evidence_refs))}</div><div class="disposition-bar"><button class="subtle" type="button" data-dispose-target="${escapeHtml(objId)}" data-dispose="useful">Útil</button><button class="subtle" type="button" data-dispose-target="${escapeHtml(objId)}" data-dispose="not_relevant">Não pertinente</button><button class="subtle" type="button" data-dispose-target="${escapeHtml(objId)}" data-dispose="incorrect_interpretation">Interpretação incorreta</button><button class="subtle" type="button" data-dispose-target="${escapeHtml(objId)}" data-dispose="revisit_later">Revisitar depois</button></div></div></details>` : ""}
+            ${objId ? `<details class="syn-inline-eval"><summary>Avaliar objeção</summary><div class="syn-eval-box"><div class="small muted"><em>Leitura alternativa:</em> ${escapeHtml(ws.revision_objection.alternative_reading)} · <strong>Fonte:</strong> ${escapeHtml(spanLabel(ws.revision_objection.evidence_refs))}</div><div class="disposition-bar"><button class="subtle" type="button" data-dispose-target="${escapeHtml(objId)}" data-dispose="useful">Útil</button><button class="subtle" type="button" data-dispose-target="${escapeHtml(objId)}" data-dispose="not_relevant">Não pertinente</button><button class="subtle" type="button" data-dispose-target="${escapeHtml(objId)}" data-dispose="incorrect_interpretation">Interpretação incorreta</button><button class="subtle" type="button" data-dispose-target="${escapeHtml(objId)}" data-dispose="revisit_later">Revisitar depois</button></div></div></details>` : ""}
           </li>
           <li class="syn-item syn-reformulation">
-            <div class="syn-bullet-head"><strong>Nova formulação:</strong> <span class="syn-turn">${escapeHtml(spanLabel(ws.new_formulation.evidence_refs, true))}</span></div>
+            <div class="syn-bullet-head"><strong>Nova formulação</strong> <span class="syn-turn">${escapeHtml(spanLabel(ws.new_formulation.evidence_refs, true))}</span></div>
             <div class="syn-bullet-text">${highlightTransformText(ws.new_formulation.text)}</div>
           </li>
           <li class="syn-item syn-question">
-            <div class="syn-bullet-head"><strong>Questão em aberto:</strong> <span class="syn-turn">${escapeHtml(spanLabel(ws.open_question.evidence_refs, true))}</span></div>
+            <div class="syn-bullet-head"><strong>Questão em aberto</strong> <span class="syn-turn">${escapeHtml(spanLabel(ws.open_question.evidence_refs, true))}</span></div>
             <div class="syn-bullet-text">${escapeHtml(ws.open_question.text)}</div>
           </li>
         </ul>
         <div class="synthesis-footer">
           ${chainsDrawer}
-          <button type="button" class="linklike" data-switch-ws="editor">✎ Editar ou acrescentar notas no Caderno Markdown →</button>
+          <button type="button" class="linklike" data-switch-ws="editor">✎ Caderno Markdown →</button>
         </div>
       </div>`;
     }
@@ -300,7 +300,7 @@ function renderCriticalTrajectory(data) {
   if($("#reference-continuum-cards")){
     $("#reference-continuum-cards").innerHTML=slots.length?slots.map(s=>{
       const icon = SLOT_ICON[s.kind] || "✦";
-      const headline = String(s.headline || s.summary || "").replace(/->/g, "→");
+      const headline = clipText(String(s.headline || s.summary || "").replace(/->/g, "→"), 86);
       const fullSummary = String(s.summary || "").replace(/->/g, "→");
       return `<div class="epistemic-card" data-slot="${escapeHtml(s.kind)}">
         <div class="epistemic-card-row">
@@ -311,9 +311,8 @@ function renderCriticalTrajectory(data) {
               <span class="chip">${escapeHtml(STATE_LABEL[s.state]||s.state)}</span>
             </div>
             <div class="epistemic-card-body">${escapeHtml(headline)}</div>
-            ${s.related_title ? `<div class="epistemic-cross-tag">⇄ Vínculo: ${escapeHtml(s.related_title)}</div>` : ""}
             <details class="card-drawer">
-              <summary>Detalhe e fonte</summary>
+              <summary>${s.related_title ? `⇄ ${escapeHtml(clipText(s.related_title, 26))} · detalhe` : "Detalhe e fonte"}</summary>
               <div class="card-drawer-body">
                 ${fullSummary !== headline ? `<div>${escapeHtml(fullSummary)}</div>` : ""}
                 ${s.evidence_refs?.length?`<div><strong>Fonte:</strong> ${escapeHtml(spanLabel(s.evidence_refs))}</div>`:""}
@@ -414,14 +413,17 @@ async function actions(event){
  if(target.dataset.openNode)return openNode(target.dataset.openNode);
  if(target.dataset.wsMode){setWorkspaceMode(target.dataset.wsMode);if(target.dataset.wsMode==="editor")$("#working-text")?.focus();return;}
  if(target.dataset.switchWs){setWorkspaceMode(target.dataset.switchWs);if(target.dataset.switchWs==="editor")$("#working-text")?.focus();return;}
+ if(target.id==="close-ribbon-inspector"){$$(".ribbon-step").forEach(b=>b.classList.remove("selected"));$("#ribbon-inspector")?.classList.add("hidden");return;}
  if(target.dataset.ribbonIdx!==undefined&&active?.ribbonSteps){
   const idx = Number(target.dataset.ribbonIdx);
   const step = active.ribbonSteps[idx];
   const insp = $("#ribbon-inspector");
   if(step && insp){
-    $$(".ribbon-step").forEach((b,i)=>b.classList.toggle("selected",i===idx));
+    const already = target.classList.contains("selected") && !insp.classList.contains("hidden");
+    $$(".ribbon-step").forEach((b,i)=>b.classList.toggle("selected",!already&&i===idx));
+    if(already){insp.classList.add("hidden");return;}
     insp.classList.remove("hidden");
-    insp.innerHTML = `<div><strong>Etapa ${step.step} · ${escapeHtml(step.concept_title || step.stage_label)} (${escapeHtml(step.stage_label)}):</strong> ${highlightTransformText(step.full_content || step.summary)}</div><div class="small muted">Âncora verificável: ${escapeHtml(spanLabel(step.evidence_refs))}</div>`;
+    insp.innerHTML = `<div class="ribbon-inspector-row"><div><strong>Etapa ${step.step} · ${escapeHtml(step.concept_title || step.stage_label)} (${escapeHtml(step.stage_label)}):</strong> ${highlightTransformText(step.full_content || step.summary)}</div><button id="close-ribbon-inspector" class="ribbon-close" type="button" aria-label="Fechar inspetor">×</button></div><div class="small muted">Âncora verificável: ${escapeHtml(spanLabel(step.evidence_refs))}</div>`;
   }
   return;
  }

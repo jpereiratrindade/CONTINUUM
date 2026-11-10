@@ -280,8 +280,12 @@ def _clip(text: str, limit: int = 240) -> str:
 def _classify_segment(seg: str, role: str, index_in_turn: int, turn_index: int) -> str:
     """Classify a discourse segment into a candidate IntellectualMove kind."""
     low = seg.lower().strip()
-    # 1. Explicit questions at the end of a segment (unless it is a rhetorical proposal)
+    # 1. Explicit questions at the end of a segment OR opening gap/problem declaration in turn 0
     if low.endswith("?") and any(q in low for q in ("como ", "qual ", "quais ", "por que ", "o que ", "onde ", "quando ", "será", "sera")):
+        return "question"
+    if turn_index == 0 and index_in_turn == 0 and role == "user" and any(
+        g in low for g in ("faltam ferramentas", "falta uma abstra", "não consigo vislumbrar", "nao consigo vislumbrar", "como integrar")
+    ):
         return "question"
 
     # 2. Methodological qualifications / conditions (checked before objection so 'Cuidado fundamental...' is a qualification)
@@ -1463,13 +1467,13 @@ def critical_trajectory(lab: Lab, trajectory_id: str) -> dict[str, Any]:
             cross_terms = sh[:5]
 
     if cross_match:
-        conv_headline = _clip(conv_source["content"], 120)
+        conv_headline = _clip(conv_source["content"], 84)
         conv_summary = (
             f"Convergência entre este percurso e '{_clip(cross_match['title'], 95)}': "
             f"{_clip(conv_source['content'], 190)} (termos em comum: {', '.join(cross_terms)})."
         )
     else:
-        conv_headline = _clip(conv_source["content"], 120)
+        conv_headline = _clip(conv_source["content"], 84)
         conv_summary = _clip(conv_source["content"], 240)
 
     candidate_convergence = {
@@ -1477,7 +1481,7 @@ def critical_trajectory(lab: Lab, trajectory_id: str) -> dict[str, Any]:
         "label": "Convergência candidata",
         "headline": conv_headline,
         "summary": conv_summary,
-        "related_title": _clip(cross_match["title"], 90) if cross_match else None,
+        "related_title": _clip(cross_match["title"], 72) if cross_match else None,
         "shared_terms": cross_terms,
         "move_id": conv_source["id"],
         "related_trajectory_id": cross_match["id"] if cross_match else None,
@@ -1492,15 +1496,15 @@ def critical_trajectory(lab: Lab, trajectory_id: str) -> dict[str, Any]:
         used_move_ids.add(top_obj["id"])
         if len(active_objections) >= 2:
             first_obj = active_objections[0]
-            obj_label = f"Objeção recorrente ({len(active_objections)} ocorrências)"
-            obj_headline = _clip(first_obj["content"], 115)
+            obj_label = f"Objeção recorrente ({len(active_objections)}x)"
+            obj_headline = _clip(first_obj["content"], 84)
             obj_summary = (
                 f"Padrão crítico recorrente: (1) {_clip(first_obj['content'], 115)} · "
                 f"(2) {_clip(top_obj['content'], 115)}"
             )
         else:
-            obj_label = "Objeção ativa no escopo"
-            obj_headline = _clip(top_obj["content"], 115)
+            obj_label = "Objeção ativa"
+            obj_headline = _clip(top_obj["content"], 84)
             obj_summary = _clip(top_obj["content"], 240)
 
         recurring_objection = {
@@ -1519,13 +1523,13 @@ def critical_trajectory(lab: Lab, trajectory_id: str) -> dict[str, Any]:
     if tension_candidates:
         t_src = tension_candidates[-1]
         used_move_ids.add(t_src["id"])
-        t_headline = _clip(t_src["content"], 115)
+        t_headline = _clip(t_src["content"], 84)
         t_summary = _clip(t_src["content"], 240)
         t_refs = t_src["evidence_refs"]
         t_id = t_src["id"]
     elif chains:
         last_ch = chains[-1]
-        t_headline = _clip(last_ch["what_was_objected"]["content"], 115)
+        t_headline = _clip(last_ch["what_was_objected"]["content"], 84)
         t_summary = (
             f"Tensão entre a proposta ('{_clip(last_ch['questioned_proposal']['content'], 95)}') "
             f"e a crítica registrada ('{_clip(last_ch['what_was_objected']['content'], 95)}')."
@@ -1533,7 +1537,7 @@ def critical_trajectory(lab: Lab, trajectory_id: str) -> dict[str, Any]:
         t_refs = last_ch["what_was_objected"]["evidence_refs"]
         t_id = last_ch["what_was_objected"]["id"]
     else:
-        t_headline = _clip(default_remaining_doubt, 115)
+        t_headline = _clip(default_remaining_doubt, 84)
         t_summary = _clip(default_remaining_doubt, 240)
         t_refs = []
         t_id = None
@@ -1551,7 +1555,7 @@ def critical_trajectory(lab: Lab, trajectory_id: str) -> dict[str, Any]:
     next_movement_slot = {
         "kind": "next_movement",
         "label": "Próximo movimento",
-        "headline": _clip(default_remaining_doubt, 125),
+        "headline": _clip(default_remaining_doubt, 88),
         "summary": _clip(default_remaining_doubt, 240),
         "basis_move_id": open_questions[-1]["id"] if open_questions else conv_source["id"],
         "state": "candidate",

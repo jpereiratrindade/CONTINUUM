@@ -165,7 +165,7 @@
                 <div id="objection-alert" class="notice hidden" role="alert"></div>
                 <div class="toolbar workspace-drawers-bar">
                   <details class="transform-action-box">
-                    <summary class="subtle">+ Importar diálogo autorizado</summary>
+                    <summary class="subtle">+ Importar diálogo</summary>
                     <form id="dialogue-form" class="stack transform-form">
                       <div class="link-form">
                         <label>Identificador da conversa
@@ -185,7 +185,7 @@
                     </form>
                   </details>
                   <details class="transform-action-box">
-                    <summary class="subtle">+ Desdobrar em hipótese, ideia, decisão ou experimento</summary>
+                    <summary class="subtle">+ Desdobrar percurso</summary>
                     <form id="transform-form" class="stack transform-form">
                       <div class="link-form">
                         <label>Transformar em
@@ -229,17 +229,19 @@
               <div class="context-heading"><h2>✦ Contribuições do CONTINUUM</h2><span id="context-state" class="small muted"></span></div>
               <div id="reference-continuum-cards" class="continuum-cards"></div>
               <div id="reference-next"></div>
-              <details class="context-details" id="docs-approx-details"><summary>Fontes documentais aproximadas</summary><div id="reference-contributions"></div></details>
-              <details class="context-details"><summary>Outras aproximações</summary><div id="reference-related"></div><div id="reference-connections"></div></details>
-              <details class="context-details"><summary>Como este contexto foi preparado</summary><p class="small muted">Reconstrução candidata ancorada em turnos e fontes autorizadas. Não são conclusões definitivas.</p><div id="reference-provenance" class="small muted"></div></details>
+              <div class="context-drawers">
+                <details class="context-details" id="docs-approx-details"><summary>Fontes aproximadas</summary><div id="reference-contributions"></div></details>
+                <details class="context-details"><summary>Outras aproximações</summary><div id="reference-related"></div><div id="reference-connections"></div></details>
+                <details class="context-details"><summary>Preparação</summary><p class="small muted">Reconstrução candidata ancorada em turnos e fontes autorizadas. Não são conclusões definitivas.</p><div id="reference-provenance" class="small muted"></div></details>
+              </div>
             </aside>
             <section class="transformation-strip" aria-label="Trajetória da transformação">
               <div class="strip-header">
                 <h3>⇄ Trajetória da transformação</h3>
-                <span class="small muted">(transformações, não apenas estados — clique em uma etapa para inspecionar o movimento)</span>
+                <span class="small muted">(clique em uma etapa para inspecionar o trecho ancorado)</span>
               </div>
-              <div id="reference-ribbon" class="transformation-ribbon"></div>
               <div id="ribbon-inspector" class="ribbon-inspector hidden" aria-live="polite"></div>
+              <div id="reference-ribbon" class="transformation-ribbon"></div>
             </section>
           </div>
           <div class="home-section" id="resume"><h2>Em andamento</h2><p class="muted">Recuperando seus percursos…</p></div>
