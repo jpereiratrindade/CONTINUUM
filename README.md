@@ -120,3 +120,9 @@ CONTINUUM é disponibilizado sob a **GNU General Public License v3.0** (`GPL-3.0
 O sistema permanece experimental. **Não inserir dados sensíveis** sem revisão específica dos controles de acesso e da retenção histórica.
 
 Para os critérios de aceitação, falhas conhecidas e próximas decisões, ver os documentos versionados em `docs/`.
+
+## Premissas de desenvolvimento
+
+**Simples, leve. Sempre pronto. Sempre incompleto!**
+
+[Significado e símbolos das premissas](docs/sister-principles/README.md).
